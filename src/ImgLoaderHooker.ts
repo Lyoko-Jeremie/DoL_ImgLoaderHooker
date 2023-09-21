@@ -20,6 +20,9 @@ export class ImgLoaderHooker {
                 continue;
             }
             for (const img of mod.imgs) {
+                if (this.imgLookupTable.has(img.path)) {
+                    console.warn(`[ImageLoaderHook Mod] duplicate img path:`, [modName, img.path]);
+                }
                 this.imgLookupTable.set(img.path, img.data);
             }
         }
