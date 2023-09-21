@@ -10,7 +10,7 @@ export class ImgLoaderHooker {
     ) {
     }
 
-    private imgLookupTable: Map<string, string> = new Map();
+    private imgLookupTable: Map<string, { modName: string, imgData: string }> = new Map();
 
     private initLookupTable() {
         const modListName = this.gModUtils.getModListName();
@@ -23,7 +23,10 @@ export class ImgLoaderHooker {
                 if (this.imgLookupTable.has(img.path)) {
                     console.warn(`[ImageLoaderHook Mod] duplicate img path:`, [modName, img.path]);
                 }
-                this.imgLookupTable.set(img.path, img.data);
+                this.imgLookupTable.set(img.path, {
+                    modName,
+                    imgData: img.data,
+                });
             }
         }
     }
@@ -38,19 +41,32 @@ export class ImgLoaderHooker {
         successCallback: (src: string, layer: any, img: HTMLImageElement) => void,
         errorCallback: (src: string, layer: any, event: any) => void,
     ) {
-        if (true) {
-            console.log('ImageLoaderHook loadImage', src);
-            const image = new Image();
-            image.onload = () => {
-                successCallback(src, layer, image);
-            };
-            image.onerror = (event) => {
-                errorCallback(src, layer, event);
-            };
-            image.src = src;
-        } else {
-            this.originLoader!.loadImage(src, layer, successCallback, errorCallback);
+        console.log('ImageLoaderHook loadImage', src);
+        if (this.imgLookupTable.has(src)) {
+            const n = this.imgLookupTable.get(src);
+            if (n) {
+                console.log('ImageLoaderHook loadImage replace', [n.modName, src]);
+                const image = new Image();
+                image.onload = () => {
+                    successCallback(src, layer, image);
+                };
+                image.onerror = (event) => {
+                    errorCallback(src, layer, event);
+                };
+                image.src = n.imgData;
+                return;
+            }
         }
+        // this.originLoader!.loadImage(src, layer, successCallback, errorCallback);
+        const image = new Image();
+        image.onload = () => {
+            successCallback(src, layer, image);
+        };
+        image.onerror = (event) => {
+            errorCallback(src, layer, event);
+        };
+        image.src = src;
+
     }
 
     private setupHook() {
