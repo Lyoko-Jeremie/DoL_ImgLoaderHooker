@@ -81,7 +81,13 @@ export class ImgLoaderHooker {
 
     init() {
         this.initLookupTable();
-        this.waitKDLoadingFinished();
+        // this.waitKDLoadingFinished();
+        // this.setupHook();
+
+        $(document).one(":passageinit", () => {
+            console.log('ImageLoaderHook setupHook passageinit');
+            this.setupHook();
+        });
     }
 
 }
