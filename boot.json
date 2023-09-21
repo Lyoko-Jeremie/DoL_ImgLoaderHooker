@@ -1,0 +1,26 @@
+{
+  "name": "ModLoader DoL ImageLoaderHook",
+  "version": "1.0.0",
+  "styleFileList": [
+  ],
+  "scriptFileList_earlyload": [
+    "dist/earlyload/earlyload.js"
+  ],
+  "scriptFileList_inject_early": [
+    "dist/ImageLoaderHook.js"
+  ],
+  "scriptFileList_preload": [
+    "dist/preload/preload.js"
+  ],
+  "scriptFileList": [
+  ],
+  "tweeFileList": [
+  ],
+  "imgFileList": [
+  ],
+  "imgFileReplaceList": [
+  ],
+  "addstionFile": [
+    "README.md"
+  ]
+}
