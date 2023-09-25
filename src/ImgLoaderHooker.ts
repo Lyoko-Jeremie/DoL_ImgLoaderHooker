@@ -35,6 +35,18 @@ export class ImgLoaderHooker {
 
     private originLoader?: (typeof Renderer)['ImageLoader'];
 
+    debugGetImg(src: string): HTMLImageElement | undefined {
+        if (this.imgLookupTable.has(src)) {
+            const n = this.imgLookupTable.get(src);
+            if (n) {
+                const image = new Image();
+                image.src = n.imgData;
+                return image;
+            }
+        }
+        return undefined;
+    }
+
     private loadImage(
         src: string,
         layer: any,
@@ -45,7 +57,6 @@ export class ImgLoaderHooker {
         if (this.imgLookupTable.has(src)) {
             const n = this.imgLookupTable.get(src);
             if (n) {
-                console.log('ImageLoaderHook loadImage replace', [n.modName, src]);
                 const image = new Image();
                 image.onload = () => {
                     successCallback(src, layer, image);
@@ -54,6 +65,7 @@ export class ImgLoaderHooker {
                     errorCallback(src, layer, event);
                 };
                 image.src = n.imgData;
+                console.log('ImageLoaderHook loadImage replace', [n.modName, src, image, n.imgData]);
                 return;
             }
         }
