@@ -7,8 +7,8 @@
     "ts:w": "tsc -w -p ./src_boot/tsconfig.json",
     "webpack:w": "webpack -w -c ./webpack.config.js",
     "======================": "",
-    "ts": "tsc -p ./src_boot/tsconfig.json",
-    "webpack": "webpack -c ./webpack.config.js"
+    "build:ts": "tsc -p ./src_boot/tsconfig.json",
+    "build:webpack": "webpack -c ./webpack.config.js"
   },
   "packageManager": "yarn@3.4.1",
   "dependencies": {
