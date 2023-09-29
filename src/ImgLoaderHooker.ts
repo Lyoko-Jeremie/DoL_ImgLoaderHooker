@@ -1,13 +1,17 @@
-import {ModInfo} from "../../../dist-BeforeSC2/ModLoader";
-import {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
-import {ModUtils} from "../../../dist-BeforeSC2/Utils";
+import type {LogWrapper} from "../../../dist-BeforeSC2/ModLoadController";
+import type {ModInfo} from "../../../dist-BeforeSC2/ModLoader";
+import type {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
+import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
 
 export class ImgLoaderHooker {
+    private log: LogWrapper;
+
     constructor(
         public thisWindow: Window,
         public gSC2DataManager: SC2DataManager,
         public gModUtils: ModUtils,
     ) {
+        this.log = this.gModUtils.getLogger();
     }
 
     private imgLookupTable: Map<string, { modName: string, imgData: string }> = new Map();
