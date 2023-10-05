@@ -1,5 +1,5 @@
 import type {LogWrapper} from "../../../dist-BeforeSC2/ModLoadController";
-import type {ModInfo} from "../../../dist-BeforeSC2/ModLoader";
+import type {ModImg, ModInfo} from "../../../dist-BeforeSC2/ModLoader";
 import type {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
 import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
 
@@ -32,6 +32,18 @@ export class ImgLoaderHooker {
                     imgData: img.data,
                 });
             }
+        }
+    }
+
+    public addImages(modImg: ModImg[], modName: string) {
+        for (const img of modImg) {
+            if (this.imgLookupTable.has(img.path)) {
+                console.warn(`[ImageLoaderHook Mod] addImages duplicate img path:`, [modName, img.path]);
+            }
+            this.imgLookupTable.set(img.path, {
+                modName,
+                imgData: img.data,
+            });
         }
     }
 
