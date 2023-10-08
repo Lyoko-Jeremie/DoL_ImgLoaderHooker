@@ -1,9 +1,11 @@
+import type {AddonPluginHookPointEx} from "../../../dist-BeforeSC2/AddonPlugin";
 import type {LogWrapper} from "../../../dist-BeforeSC2/ModLoadController";
 import type {ModImg, ModInfo} from "../../../dist-BeforeSC2/ModLoader";
+import type {ModZipReader} from "../../../dist-BeforeSC2/ModZipReader";
 import type {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
 import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
 
-export class ImgLoaderHooker {
+export class ImgLoaderHooker implements AddonPluginHookPointEx {
     private log: LogWrapper;
 
     constructor(
@@ -12,6 +14,22 @@ export class ImgLoaderHooker {
         public gModUtils: ModUtils,
     ) {
         this.log = this.gModUtils.getLogger();
+    }
+
+    async registerMod(addonName: string, mod: ModInfo, modZip: ModZipReader) {
+        if (!mod) {
+            console.error('registerMod() (!mod)', [addonName, mod]);
+            return;
+        }
+        for (const img of mod.imgs) {
+            if (this.imgLookupTable.has(img.path)) {
+                console.warn(`[ImageLoaderHook Mod] registerMod duplicate img path:`, [mod.name, img.path]);
+            }
+            this.imgLookupTable.set(img.path, {
+                modName: mod.name,
+                imgData: img.data,
+            });
+        }
     }
 
     private imgLookupTable: Map<string, { modName: string, imgData: string }> = new Map();
@@ -127,7 +145,12 @@ export class ImgLoaderHooker {
     };
 
     init() {
-        this.initLookupTable();
+        this.gModUtils.getAddonPluginManager().registerAddonPlugin(
+            'ModLoader DoL ImageLoaderHook',
+            'ImgLoaderAddon',
+            this,
+        );
+        // this.initLookupTable();
         // this.waitKDLoadingFinished();
         // this.setupHook();
 
