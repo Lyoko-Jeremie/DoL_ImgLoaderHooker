@@ -16,7 +16,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         this.log = this.gModUtils.getLogger();
         this.gModUtils.getAddonPluginManager().registerAddonPlugin(
             'ModLoader DoL ImageLoaderHook',
-            'ImgLoaderAddon',
+            'ImageLoaderAddon',
             this,
         );
     }
