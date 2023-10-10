@@ -14,6 +14,11 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         public gModUtils: ModUtils,
     ) {
         this.log = this.gModUtils.getLogger();
+        this.gModUtils.getAddonPluginManager().registerAddonPlugin(
+            'ModLoader DoL ImageLoaderHook',
+            'ImgLoaderAddon',
+            this,
+        );
     }
 
     async registerMod(addonName: string, mod: ModInfo, modZip: ModZipReader) {
@@ -145,11 +150,6 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
     };
 
     init() {
-        this.gModUtils.getAddonPluginManager().registerAddonPlugin(
-            'ModLoader DoL ImageLoaderHook',
-            'ImgLoaderAddon',
-            this,
-        );
         // this.initLookupTable();
         // this.waitKDLoadingFinished();
         // this.setupHook();
