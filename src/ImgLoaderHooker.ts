@@ -5,6 +5,18 @@ import type {ModZipReader} from "../../../dist-BeforeSC2/ModZipReader";
 import type {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
 import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
 
+/**
+ * @return Promise<boolean>      Promise<true> if handle by this hooker, otherwise Promise<false>.
+ *
+ * hooker can wait until the image loaded, and then call successCallback(src, layer, img) and return Promise<true>
+ */
+export type ImgLoaderSideHooker = (
+    src: string,
+    layer: any,
+    successCallback: (src: string, layer: any, img: HTMLImageElement) => void,
+    errorCallback: (src: string, layer: any, event: any) => void,
+) => Promise<boolean>;
+
 export class ImgLoaderHooker implements AddonPluginHookPointEx {
     private log: LogWrapper;
 
@@ -35,6 +47,12 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                 imgData: img.data,
             });
         }
+    }
+
+    sideHooker: ImgLoaderSideHooker[] = [];
+
+    public addSideHooker(hooker: ImgLoaderSideHooker) {
+        this.sideHooker.push(hooker);
     }
 
     private imgLookupTable: Map<string, { modName: string, imgData: string }> = new Map();
@@ -74,7 +92,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
 
     private originLoader?: (typeof Renderer)['ImageLoader'];
 
-    debugGetImg(src: string): HTMLImageElement | undefined {
+    async debugGetImg(src: string): Promise<HTMLImageElement | undefined> {
         if (this.imgLookupTable.has(src)) {
             const n = this.imgLookupTable.get(src);
             if (n) {
@@ -86,7 +104,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         return undefined;
     }
 
-    private loadImage(
+    private async loadImage(
         src: string,
         layer: any,
         successCallback: (src: string, layer: any, img: HTMLImageElement) => void,
@@ -101,11 +119,24 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                     successCallback(src, layer, image);
                 };
                 image.onerror = (event) => {
+                    console.error('ImageLoaderHook loadImage replace error', [src]);
+                    this.log.error(`ImageLoaderHook loadImage replace error: src[${src}]`);
                     errorCallback(src, layer, event);
                 };
                 image.src = n.imgData;
                 console.log('ImageLoaderHook loadImage replace', [n.modName, src, image, n.imgData]);
                 return;
+            }
+        }
+        for (const hooker of this.sideHooker) {
+            try {
+                const r = await hooker(src, layer, successCallback, errorCallback);
+                if (r) {
+                    return;
+                }
+            } catch (e: Error | any) {
+                console.error('ImageLoaderHook loadImage sideHooker error', [src, e]);
+                this.log.error(`ImageLoaderHook loadImage sideHooker error: src[${src}] ${e?.message ? e.message : e}`);
             }
         }
         // this.originLoader!.loadImage(src, layer, successCallback, errorCallback);
@@ -114,6 +145,8 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             successCallback(src, layer, image);
         };
         image.onerror = (event) => {
+            console.warn('ImageLoaderHook loadImage originLoader error', [src]);
+            this.log.warn(`ImageLoaderHook loadImage originLoader error: src[${src}]`);
             errorCallback(src, layer, event);
         };
         image.src = src;
