@@ -36,11 +36,13 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
     async registerMod(addonName: string, mod: ModInfo, modZip: ModZipReader) {
         if (!mod) {
             console.error('registerMod() (!mod)', [addonName, mod]);
+            this.log.error(`registerMod() (!mod): addon[${addonName}] mod[${mod}]`);
             return;
         }
         for (const img of mod.imgs) {
             if (this.imgLookupTable.has(img.path)) {
                 console.warn(`[ImageLoaderHook Mod] registerMod duplicate img path:`, [mod.name, img.path]);
+                this.log.warn(`[ImageLoaderHook Mod] registerMod duplicate img path: mod[${mod.name}] img[${img.path}]`);
             }
             this.imgLookupTable.set(img.path, {
                 modName: mod.name,
@@ -67,6 +69,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             for (const img of mod.imgs) {
                 if (this.imgLookupTable.has(img.path)) {
                     console.warn(`[ImageLoaderHook Mod] duplicate img path:`, [modName, img.path]);
+                    this.log.warn(`[ImageLoaderHook Mod] duplicate img path: mod[${modName}] img[${img.path}]`);
                 }
                 this.imgLookupTable.set(img.path, {
                     modName,
@@ -80,9 +83,28 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         for (const img of modImg) {
             if (this.imgLookupTable.has(img.path)) {
                 console.warn(`[ImageLoaderHook Mod] addImages duplicate img path:`, [modName, img.path]);
+                this.log.warn(`[ImageLoaderHook Mod] addImages duplicate img path: mod[${modName}] img[${img.path}]`);
             }
             this.imgLookupTable.set(img.path, {
                 modName,
+                imgData: img.data,
+            });
+        }
+    }
+
+    public forceLoadModImage(mod: ModInfo, modZip: ModZipReader) {
+        if (!mod) {
+            console.error('forceLoadModImage() (!mod)');
+            this.log.error(`forceLoadModImage() (!mod)`);
+            return;
+        }
+        for (const img of mod.imgs) {
+            if (this.imgLookupTable.has(img.path)) {
+                console.warn(`[ImageLoaderHook Mod] forceLoadModImage duplicate img path:`, [mod.name, img.path]);
+                this.log.warn(`[ImageLoaderHook Mod] forceLoadModImage duplicate img path: mod[${mod.name}] img[${img.path}]`);
+            }
+            this.imgLookupTable.set(img.path, {
+                modName: mod.name,
                 imgData: img.data,
             });
         }
@@ -155,7 +177,8 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
 
     private setupHook() {
         if (this.hooked) {
-            console.error('setupHook() (this.hooked)');
+            console.error('[ImageLoaderHook Mod] setupHook() (this.hooked)');
+            this.log.error(`[ImageLoaderHook Mod] setupHook() (this.hooked)`);
             return;
         }
         this.hooked = true;
@@ -171,6 +194,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         if (this.waitInitCounter > 1000) {
             // don't wait it
             console.log('[ImageLoaderHook Mod] (waitInitCounter > 1000) dont wait it');
+            this.log.log(`[ImageLoaderHook Mod] (waitInitCounter > 1000) dont wait it`);
             return;
         }
         if (typeof Renderer === 'undefined') {
@@ -189,6 +213,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
 
         $(document).one(":passageinit", () => {
             console.log('ImageLoaderHook setupHook passageinit');
+            this.log.log(`ImageLoaderHook setupHook passageinit`);
             this.setupHook();
         });
     }
