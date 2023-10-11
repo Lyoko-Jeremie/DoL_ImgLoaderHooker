@@ -40,9 +40,10 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             return;
         }
         for (const img of mod.imgs) {
-            if (this.imgLookupTable.has(img.path)) {
-                console.warn(`[ImageLoaderHook Mod] registerMod duplicate img path:`, [mod.name, img.path]);
-                this.log.warn(`[ImageLoaderHook Mod] registerMod duplicate img path: mod[${mod.name}] img[${img.path}]`);
+            const n = this.imgLookupTable.get(img.path);
+            if (n) {
+                console.warn(`[ImageLoaderHook Mod] registerMod duplicate img path:`, [mod.name, img.path, n.modName]);
+                this.log.warn(`[ImageLoaderHook Mod] registerMod duplicate img path: mod[${mod.name}] img[${img.path}] old[${n.modName}]`);
             }
             this.imgLookupTable.set(img.path, {
                 modName: mod.name,
