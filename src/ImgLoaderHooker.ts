@@ -47,7 +47,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             }
             this.imgLookupTable.set(img.path, {
                 modName: mod.name,
-                imgData: img.data,
+                imgData: img,
             });
         }
     }
@@ -58,7 +58,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         this.sideHooker.push(hooker);
     }
 
-    private imgLookupTable: Map<string, { modName: string, imgData: string }> = new Map();
+    private imgLookupTable: Map<string, { modName: string, imgData: ModImg }> = new Map();
 
     private initLookupTable() {
         const modListName = this.gModUtils.getModListName();
@@ -74,7 +74,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                 }
                 this.imgLookupTable.set(img.path, {
                     modName,
-                    imgData: img.data,
+                    imgData: img,
                 });
             }
         }
@@ -88,7 +88,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             }
             this.imgLookupTable.set(img.path, {
                 modName,
-                imgData: img.data,
+                imgData: img,
             });
         }
     }
@@ -106,7 +106,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             }
             this.imgLookupTable.set(img.path, {
                 modName: mod.name,
-                imgData: img.data,
+                imgData: img,
             });
         }
     }
@@ -120,7 +120,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             const n = this.imgLookupTable.get(src);
             if (n) {
                 const image = new Image();
-                image.src = n.imgData;
+                image.src = await n.imgData.getter.getBase64Image();
                 return image;
             }
         }
@@ -137,18 +137,25 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         if (this.imgLookupTable.has(src)) {
             const n = this.imgLookupTable.get(src);
             if (n) {
-                const image = new Image();
-                image.onload = () => {
-                    successCallback(src, layer, image);
-                };
-                image.onerror = (event) => {
-                    console.error('ImageLoaderHook loadImage replace error', [src]);
-                    this.log.error(`ImageLoaderHook loadImage replace error: src[${src}]`);
-                    errorCallback(src, layer, event);
-                };
-                image.src = n.imgData;
-                console.log('ImageLoaderHook loadImage replace', [n.modName, src, image, n.imgData]);
-                return;
+                try {
+                    // this may throw error
+                    const imgString = await n.imgData.getter.getBase64Image();
+
+                    const image = new Image();
+                    image.onload = () => {
+                        successCallback(src, layer, image);
+                    };
+                    image.onerror = (event) => {
+                        console.error('ImageLoaderHook loadImage replace error', [src]);
+                        this.log.error(`ImageLoaderHook loadImage replace error: src[${src}]`);
+                        errorCallback(src, layer, event);
+                    };
+                    image.src = imgString;
+                    console.log('ImageLoaderHook loadImage replace', [n.modName, src, image, n.imgData]);
+                    return;
+                } catch (e) {
+                    console.error('ImageLoaderHook loadImage replace error', [src, e]);
+                }
             }
         }
         for (const hooker of this.sideHooker) {

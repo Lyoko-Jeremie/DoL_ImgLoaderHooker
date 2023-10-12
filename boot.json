@@ -1,6 +1,6 @@
 {
   "name": "ModLoader DoL ImageLoaderHook",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "styleFileList": [
   ],
   "scriptFileList_earlyload": [
@@ -22,5 +22,11 @@
   ],
   "additionFile": [
     "README.md"
+  ],
+  "dependenceInfo": [
+    {
+      "modName": "ModLoader",
+      "version": "^1.5.0"
+    }
   ]
 }
