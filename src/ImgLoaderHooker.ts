@@ -190,6 +190,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             return;
         }
         this.hooked = true;
+        console.log('[ImageLoaderHook Mod] setupHook()');
 
         this.originLoader = Renderer.ImageLoader;
         Renderer.ImageLoader = {
@@ -217,13 +218,16 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
     init() {
         // this.initLookupTable();
         // this.waitKDLoadingFinished();
-        // this.setupHook();
 
-        $(document).one(":passageinit", () => {
-            console.log('ImageLoaderHook setupHook passageinit');
-            this.log.log(`ImageLoaderHook setupHook passageinit`);
-            this.setupHook();
-        });
+        // $(document).one(":passageinit", () => {
+        //     console.log('ImageLoaderHook setupHook passageinit');
+        //     this.log.log(`ImageLoaderHook setupHook passageinit`);
+        //     this.setupHook();
+        // });
+    }
+
+    installHook() {
+        this.setupHook();
     }
 
 }
