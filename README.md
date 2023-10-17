@@ -6,7 +6,7 @@
     {
       "modName": "ModLoader DoL ImageLoaderHook",
       "addonName": "ImageLoaderAddon",
-      "modVersion": "^2.0.1",
+      "modVersion": "^2.3.0",
       "params": [
       ]
     }
@@ -18,7 +18,7 @@
     },
     {
       "modName": "ModLoader DoL ImageLoaderHook",
-      "version": "^2.0.1"
+      "version": "^2.3.0"
     }
   ]
 }
