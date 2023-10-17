@@ -31,7 +31,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             'ImageLoaderAddon',
             this,
         );
-        this.gSC2DataManager.getHtmlTagSrcHook().addHook('i18n_CN_Banner',
+        this.gSC2DataManager.getHtmlTagSrcHook().addHook('ImgLoaderHooker',
             async (el: HTMLImageElement | HTMLElement, mlSrc: string) => {
                 if (this.imgLookupTable.has(mlSrc)) {
                     const n = this.imgLookupTable.get(mlSrc);
