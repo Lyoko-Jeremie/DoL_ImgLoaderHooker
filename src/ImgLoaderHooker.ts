@@ -31,6 +31,25 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             'ImageLoaderAddon',
             this,
         );
+        this.gSC2DataManager.getHtmlTagSrcHook().addHook('i18n_CN_Banner',
+            async (el: HTMLImageElement | HTMLElement, mlSrc: string) => {
+                if (this.imgLookupTable.has(mlSrc)) {
+                    const n = this.imgLookupTable.get(mlSrc);
+                    if (n) {
+                        try {
+                            // this may throw error
+                            const imgString = await n.imgData.getter.getBase64Image();
+                            el.setAttribute('src', imgString);
+                            return true;
+                        } catch (e: Error | any) {
+                            console.error('ImageLoaderHook HtmlTagSrcHook replace error', [mlSrc, e]);
+                            this.log.error(`ImageLoaderHook HtmlTagSrcHook replace error: src[${mlSrc}] error[${e?.message ? e.message : e}]`);
+                        }
+                    }
+                }
+                return false;
+            }
+        );
     }
 
     async registerMod(addonName: string, mod: ModInfo, modZip: ModZipReader) {
@@ -151,7 +170,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                         errorCallback(src, layer, event);
                     };
                     image.src = imgString;
-                    console.log('ImageLoaderHook loadImage replace', [n.modName, src, image, n.imgData]);
+                    // console.log('ImageLoaderHook loadImage replace', [n.modName, src, image, n.imgData]);
                     return;
                 } catch (e) {
                     console.error('ImageLoaderHook loadImage replace error', [src, e]);
