@@ -17,6 +17,10 @@ declare global {
         },
     };
 
+    var Macro: {
+        get: (name: string) => any;
+    };
+
     interface Window {
         modUtils: ModUtils;
         modSC2DataManager: SC2DataManager;

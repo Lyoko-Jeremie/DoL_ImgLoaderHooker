@@ -1,0 +1,1 @@
+window.modImgLoaderHooker.modifyMacroIcon(Macro);

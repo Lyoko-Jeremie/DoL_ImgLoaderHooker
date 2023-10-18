@@ -15,6 +15,16 @@ declare global {
         },
     };
 
+    var SugarCube: {
+        Macro: {
+            get: (name: string) => any;
+        }
+    };
+    var Macro: {
+        get: (name: string) => any;
+    };
+    var V: any;
+
     interface Window {
         modUtils: ModUtils;
         modSC2DataManager: SC2DataManager;
@@ -22,5 +32,11 @@ declare global {
         modImgLoaderHooker: ImgLoaderHooker;
 
         jQuery: jQuery;
+
+        SugarCube: {
+            Macro: {
+                get: (name: string) => any;
+            }
+        };
     }
 }

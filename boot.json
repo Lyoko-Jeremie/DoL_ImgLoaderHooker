@@ -1,6 +1,6 @@
 {
   "name": "ModLoader DoL ImageLoaderHook",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "styleFileList": [
   ],
   "scriptFileList_earlyload": [
@@ -12,6 +12,7 @@
     "dist/preload/preload.js"
   ],
   "scriptFileList": [
+    "dist/js/installLoaderHook.js"
   ],
   "tweeFileList": [
   ],

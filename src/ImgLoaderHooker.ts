@@ -4,6 +4,7 @@ import type {ModImg, ModInfo} from "../../../dist-BeforeSC2/ModLoader";
 import type {ModZipReader} from "../../../dist-BeforeSC2/ModZipReader";
 import type {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
 import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
+import {isFunction} from 'lodash';
 
 /**
  * @return Promise<boolean>      Promise<true> if handle by this hooker, otherwise Promise<false>.
@@ -249,5 +250,87 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         this.setupHook();
     }
 
+    modifyMacroIcon(Macro: any) {
+        // console.log('window.SugarCube', window.SugarCube);
+        const icon = Macro.get('icon');
+        if (!icon) {
+            console.error('modifyMacroIcon() cannot find macro icon');
+            this.log.error(`modifyMacroIcon() cannot find macro icon`);
+            return;
+        }
+        const h = icon.OriginHandlerPassageQBalance;
+        if (!h && !isFunction(h)) {
+            console.error('modifyMacroIcon() cannot find macro icon handle', [icon, h]);
+            this.log.error(`modifyMacroIcon() cannot find macro icon handle`);
+            return;
+        }
+        const hCode = h.toString();
+        const code = `handler() {
+\t\tif (!V.options.images) return;
+\t\tconst name = typeof this.args[0] === "string" ? this.args[0] : "error";
+\t\tconst iconImg = document.createElement("img");
+\t\ticonImg.className = "icon";
+\t\ticonImg.src = "img/misc/icon/" + name;
+\t\tthis.output.append(iconImg);
+\t\t// append a whitespace for compatibility with old icon behavior
+\t\tif (!this.args.includes("nowhitespace")) this.output.append(" ");
+\t}`;
+        if (code !== hCode) {
+            console.warn('modifyMacroIcon() macro icon handle changed', [icon, h, hCode, code]);
+            this.log.warn(`modifyMacroIcon() macro icon handle changed.`);
+        }
+        // hCode.replace('this.output.append(iconImg);', `
+        // if (typeof window.modSC2DataManager !== 'undefined' &&
+        //   typeof window.modSC2DataManager.getHtmlTagSrcHook?.()?.doHook !== 'undefined') {
+        //   if (iconImg.tagName.toLowerCase() === 'img' && !iconImg.getAttribute('src')?.startsWith('data:')) {
+        //     // need check the src is not "data:" URI
+        //     iconImg.setAttribute('ML-src', iconImg.getAttribute('src'));
+        //     iconImg.removeAttribute('src');
+        //     // call img loader on there
+        //     window.modSC2DataManager.getHtmlTagSrcHook().doHook(iconImg).catch(E => console.error(E));
+        //   }
+        // }
+        // this.output.append(iconImg);
+        // `)
+        // icon.OriginHandlerPassageQBalance = createFunctionFromCode(hCode);
+        // console.log('icon', icon);
+        Macro.delete('icon');
+        Macro.add("icon", {
+            handler: function () {
+                if (!V.options.images) return;
+                const name = typeof this.args[0] === "string" ? this.args[0] : "error";
+                const iconImg = document.createElement("img");
+                iconImg.className = "icon";
+                iconImg.src = "img/misc/icon/" + name;
+
+                if (typeof window.modSC2DataManager !== 'undefined' &&
+                    typeof window.modSC2DataManager.getHtmlTagSrcHook?.()?.doHook !== 'undefined') {
+                    if (iconImg.tagName.toLowerCase() === 'img' && !iconImg.getAttribute('src')?.startsWith('data:')) {
+                        // need check the src is not "data:" URI
+                        iconImg.setAttribute('ML-src', iconImg.getAttribute('src')!);
+                        iconImg.removeAttribute('src');
+                        // call img loader on there
+                        window.modSC2DataManager.getHtmlTagSrcHook().doHook(iconImg).catch(E => console.error(E));
+                    }
+                }
+
+                this.output.append(iconImg);
+                // append a whitespace for compatibility with old icon behavior
+                if (!this.args.includes("nowhitespace")) this.output.append(" ");
+            },
+        });
+    }
+
 }
 
+export function createFunctionFromCode(source: string) {
+
+    // 使用新源代码创建新的函数
+    // 由于我们要保留函数的参数名称（name），我们需要一些解析逻辑
+    let paramsStr = source.substring(source.indexOf('(') + 1, source.indexOf(')'));
+    let params = paramsStr.split(',').map(p => p.trim());
+    let body = source.substring(source.indexOf('{') + 1, source.lastIndexOf('}'));
+
+    let modifiedFunction = new Function(...params, body);
+    return modifiedFunction;
+}
