@@ -251,6 +251,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
     }
 
     modifyMacroIcon(Macro: any) {
+        console.log('modifyMacroIcon() start');
         // console.log('window.SugarCube', window.SugarCube);
         const icon = Macro.get('icon');
         if (!icon) {
@@ -319,6 +320,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                 if (!this.args.includes("nowhitespace")) this.output.append(" ");
             },
         });
+        console.log('modifyMacroIcon() ok');
     }
 
 }
