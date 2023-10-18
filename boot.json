@@ -4,7 +4,6 @@
   "styleFileList": [
   ],
   "scriptFileList_earlyload": [
-    "dist/earlyload/earlyload.js"
   ],
   "scriptFileList_inject_early": [
     "dist/ImageLoaderHook.mod.js"
@@ -13,7 +12,6 @@
     "dist/preload/preload.js"
   ],
   "scriptFileList": [
-    "dist/js/installLoaderHook.js"
   ],
   "tweeFileList": [
   ],
