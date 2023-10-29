@@ -1,8 +1,14 @@
 # ModLoader DoL ImageLoaderHook
 
-```json
+```json lines
 {
+  "imgFileList": [
+    // place your image file here
+    "img/xxx/aaa/bbb/ccc.png",
+    "img/xxx/111/222/333.png"
+  ],
   "addonPlugin": [
+    // simple write this :
     {
       "modName": "ModLoader DoL ImageLoaderHook",
       "addonName": "ImageLoaderAddon",
@@ -12,6 +18,7 @@
     }
   ],
   "dependenceInfo": [
+    // dont forgot this :
     {
       "modName": "ModLoader DoL ImageLoaderHook",
       "version": "^2.3.0"
