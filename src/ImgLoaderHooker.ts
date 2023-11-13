@@ -153,7 +153,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         successCallback: (src: string, layer: any, img: HTMLImageElement) => void,
         errorCallback: (src: string, layer: any, event: any) => void,
     ) {
-        console.log('ImageLoaderHook loadImage', src);
+        // console.log('ImageLoaderHook loadImage', src);
         if (this.imgLookupTable.has(src)) {
             const n = this.imgLookupTable.get(src);
             if (n) {
