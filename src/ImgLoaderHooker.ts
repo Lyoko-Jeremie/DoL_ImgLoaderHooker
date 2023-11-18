@@ -4,19 +4,23 @@ import type {ModImg, ModInfo} from "../../../dist-BeforeSC2/ModLoader";
 import type {ModZipReader} from "../../../dist-BeforeSC2/ModZipReader";
 import type {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
 import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
-import {isFunction} from 'lodash';
+import {isFunction, isString} from 'lodash';
 
 /**
  * @return Promise<boolean>      Promise<true> if handle by this hooker, otherwise Promise<false>.
  *
  * hooker can wait until the image loaded, and then call successCallback(src, layer, img) and return Promise<true>
  */
-export type ImgLoaderSideHooker = (
-    src: string,
-    layer: any,
-    successCallback: (src: string, layer: any, img: HTMLImageElement) => void,
-    errorCallback: (src: string, layer: any, event: any) => void,
-) => Promise<boolean>;
+export interface ImgLoaderSideHooker {
+    hookName: string;
+    imageLoader: (
+        src: string,
+        layer: any,
+        successCallback: (src: string, layer: any, img: HTMLImageElement) => void,
+        errorCallback: (src: string, layer: any, event: any) => void,
+    ) => Promise<boolean>;
+    imageGetter: (src: string) => Promise<string | undefined>;
+}
 
 export class ImgLoaderHooker implements AddonPluginHookPointEx {
     private log: LogWrapper;
@@ -34,39 +38,18 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         );
         this.gSC2DataManager.getHtmlTagSrcHook().addHook('ImgLoaderHooker',
             async (el: HTMLImageElement | HTMLElement, mlSrc: string) => {
-                if (this.imgLookupTable.has(mlSrc)) {
-                    const n = this.imgLookupTable.get(mlSrc);
-                    if (n) {
-                        try {
-                            // this may throw error
-                            const imgString = await n.imgData.getter.getBase64Image();
-                            el.setAttribute('src', imgString);
-                            return true;
-                        } catch (e: Error | any) {
-                            console.error('[ImageLoaderHook] ImgLoaderHooker replace error', [mlSrc, e]);
-                            this.log.error(`[ImageLoaderHook] ImgLoaderHooker replace error: src[${mlSrc}] error[${e?.message ? e.message : e}]`);
-                        }
-                    }
+                const img = await this.getImage(mlSrc);
+                if (img) {
+                    el.setAttribute('src', img);
+                    return true;
                 }
                 return false;
             }
         );
         this.gSC2DataManager.getHtmlTagSrcHook().addReturnModeHook('ImgLoaderReturnModeHooker',
             async (mlSrc: string) => {
-                if (this.imgLookupTable.has(mlSrc)) {
-                    const n = this.imgLookupTable.get(mlSrc);
-                    if (n) {
-                        try {
-                            // this may throw error
-                            const imgString = await n.imgData.getter.getBase64Image();
-                            return [true, imgString];
-                        } catch (e: Error | any) {
-                            console.error('[ImageLoaderHook] ImgLoaderReturnModeHooker replace error', [mlSrc, e]);
-                            this.log.error(`[ImageLoaderHook] ImgLoaderReturnModeHooker replace error: src[${mlSrc}] error[${e?.message ? e.message : e}]`);
-                        }
-                    }
-                }
-                return [false, mlSrc];
+                const img = await this.getImage(mlSrc);
+                return [!!img, mlSrc];
             },
         );
     }
@@ -93,7 +76,19 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
     sideHooker: ImgLoaderSideHooker[] = [];
 
     public addSideHooker(hooker: ImgLoaderSideHooker) {
-        this.sideHooker.push(hooker);
+        if (isFunction(hooker)) {
+            console.error('[ImageLoaderHook] addSideHooker() hooker is function, the ImageLoaderHook API is changed since 2.7.0 .', [hooker]);
+            this.log.error(`[ImageLoaderHook] addSideHooker() hooker is function, the ImageLoaderHook API is changed since 2.7.0 .`);
+            return;
+        }
+        if (isFunction(hooker.imageLoader) && isFunction(hooker.imageGetter) && isString(hooker.hookName)) {
+            console.log('[ImageLoaderHook] addSideHooker() ok', [hooker]);
+            this.log.log(`[ImageLoaderHook] addSideHooker() ok: hookName[${hooker.hookName}]`);
+            this.sideHooker.push(hooker);
+            return;
+        }
+        console.error('[ImageLoaderHook] addSideHooker() failed. invalid hook.', [hooker]);
+        this.log.error(`[ImageLoaderHook] addSideHooker() failed. invalid hook. hookName[${hooker.hookName}]`);
     }
 
     private imgLookupTable: Map<string, { modName: string, imgData: ModImg }> = new Map();
@@ -133,8 +128,8 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
 
     public forceLoadModImage(mod: ModInfo, modZip: ModZipReader) {
         if (!mod) {
-            console.error('forceLoadModImage() (!mod)');
-            this.log.error(`forceLoadModImage() (!mod)`);
+            console.error('[ImageLoaderHook] forceLoadModImage() (!mod)');
+            this.log.error(`[ImageLoaderHook] forceLoadModImage() (!mod)`);
             return;
         }
         for (const img of mod.imgs) {
@@ -165,13 +160,39 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         return undefined;
     }
 
+    private async getImage(src: string) {
+        if (this.imgLookupTable.has(src)) {
+            const n = this.imgLookupTable.get(src);
+            if (n) {
+                try {
+                    return await n.imgData.getter.getBase64Image();
+                } catch (e) {
+                    console.error('[ImageLoaderHook] getImage replace error', [src, e]);
+                }
+            }
+        }
+        // console.log('[ImageLoaderHook] loadImage not in imgLookupTable', src);
+        for (const hooker of this.sideHooker) {
+            try {
+                const r = await hooker.imageGetter(src);
+                if (r) {
+                    return r;
+                }
+            } catch (e: Error | any) {
+                console.error('[ImageLoaderHook] getImage sideHooker error', [src, hooker, e,]);
+                this.log.error(`[ImageLoaderHook] getImage sideHooker error: src[${src}] hook[${hooker.hookName}] ${e?.message ? e.message : e}`);
+            }
+        }
+        return undefined;
+    }
+
     private async loadImage(
         src: string,
         layer: any,
         successCallback: (src: string, layer: any, img: HTMLImageElement) => void,
         errorCallback: (src: string, layer: any, event: any) => void,
     ) {
-        // console.log('ImageLoaderHook loadImage', src);
+        // console.log('[ImageLoaderHook] loadImage', src);
         if (this.imgLookupTable.has(src)) {
             const n = this.imgLookupTable.get(src);
             if (n) {
@@ -184,41 +205,42 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                         successCallback(src, layer, image);
                     };
                     image.onerror = (event) => {
-                        console.error('ImageLoaderHook loadImage replace error', [src]);
-                        this.log.error(`ImageLoaderHook loadImage replace error: src[${src}]`);
+                        console.error('[ImageLoaderHook] loadImage replace error', [src]);
+                        this.log.error(`[ImageLoaderHook] loadImage replace error: src[${src}]`);
                         errorCallback(src, layer, event);
                     };
                     image.src = imgString;
-                    // console.log('ImageLoaderHook loadImage replace', [n.modName, src, image, n.imgData]);
+                    // console.log('[ImageLoaderHook] loadImage replace', [n.modName, src, image, n.imgData]);
                     return;
                 } catch (e) {
-                    console.error('ImageLoaderHook loadImage replace error', [src, e]);
+                    console.error('[ImageLoaderHook] loadImage replace error', [src, e]);
                 }
             }
         }
+        // console.log('[ImageLoaderHook] loadImage not in imgLookupTable', src);
         for (const hooker of this.sideHooker) {
             try {
-                const r = await hooker(src, layer, successCallback, errorCallback);
+                const r = await hooker.imageLoader(src, layer, successCallback, errorCallback);
                 if (r) {
                     return;
                 }
             } catch (e: Error | any) {
-                console.error('ImageLoaderHook loadImage sideHooker error', [src, e]);
-                this.log.error(`ImageLoaderHook loadImage sideHooker error: src[${src}] ${e?.message ? e.message : e}`);
+                console.error('[ImageLoaderHook] loadImage sideHooker error', [src, hooker, e,]);
+                this.log.error(`[ImageLoaderHook] loadImage sideHooker error: src[${src}] hook[${hooker.hookName}] ${e?.message ? e.message : e}`);
             }
         }
+        // console.log('[ImageLoaderHook] loadImage not in sideHooker', src);
         // this.originLoader!.loadImage(src, layer, successCallback, errorCallback);
         const image = new Image();
         image.onload = () => {
             successCallback(src, layer, image);
         };
         image.onerror = (event) => {
-            console.warn('ImageLoaderHook loadImage originLoader error', [src]);
-            this.log.warn(`ImageLoaderHook loadImage originLoader error: src[${src}]`);
+            console.warn('[ImageLoaderHook] loadImage originLoader error', [src]);
+            this.log.warn(`[ImageLoaderHook] loadImage originLoader error: src[${src}]`);
             errorCallback(src, layer, event);
         };
         image.src = src;
-
     }
 
     private setupHook() {
