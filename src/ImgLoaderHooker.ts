@@ -292,6 +292,18 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         //     this.log.log(`[ImageLoaderHook] setupHook passageinit`);
         //     this.setupHook();
         // });
+
+        // game/04-Variables/canvasmodel-patterns-lib.js
+        // game/04-Variables/canvasmodel-patterns-api.js
+        // @ts-ignore
+        window.registerImagePattern = (name:string, src:string)=> {
+            const image = new Image();
+            image.onload = function () {
+                // @ts-ignore
+                Renderer.Patterns[name] = Renderer.globalC2D.createPattern(image, "repeat");
+            };
+            image.src = src;
+        }
     }
 
     installHook() {
