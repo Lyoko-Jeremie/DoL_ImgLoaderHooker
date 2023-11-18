@@ -28,6 +28,20 @@
         sc.content = sc.content.replaceAll(`registerImagePattern`, 'window.registerImagePattern');
     }
 
+    // game/03-JavaScript/base.js
+    {
+        const sc = scNew.scriptFileItems.map.get('base.js');
+        if (!sc) {
+            console.error('[ImageLoaderHook] cannot find base.js');
+            logger.error('[ImageLoaderHook] cannot find base.js');
+            return;
+        }
+        sc.content = sc.content.replace(
+            `newElem.setAttributeNS("http://www.w3.org/1999/xlink", "href", oldElem.attr("href") || oldElem.attr("xlink:href") || "");`,
+            'window.registerImagePatternSvgImage(oldElem, newElem);',
+        );
+    }
+
     scNew.scriptFileItems.back2Array();
 
     window.modUtils.replaceFollowSC2DataInfo(scNew, scOld);

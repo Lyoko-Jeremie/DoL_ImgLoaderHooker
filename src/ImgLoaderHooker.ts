@@ -296,13 +296,64 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         // game/04-Variables/canvasmodel-patterns-lib.js
         // game/04-Variables/canvasmodel-patterns-api.js
         // @ts-ignore
-        window.registerImagePattern = (name:string, src:string)=> {
+        window.registerImagePattern = (name: string, src: string) => {
             const image = new Image();
             image.onload = function () {
                 // @ts-ignore
                 Renderer.Patterns[name] = Renderer.globalC2D.createPattern(image, "repeat");
             };
             image.src = src;
+        }
+
+        // game/03-JavaScript/base.js
+        // function processedSvg(width, height) ->  const fixSVGNameSpace = (type, elem, newParent = null)  ->  switch
+        // @ts-ignore
+        window.registerImagePatternSvgImage = (oldElem, newElem) => {
+            // this will be call 2 time
+            let href = oldElem.attr("href") || oldElem.attr("xlink:href") || undefined;
+            if (oldElem.attr("ML-href") || oldElem.attr("ml-href") || oldElem.attr("ML-mark")) {
+                // this element is processed
+                console.log('************************** fixSVGNameSpace element is processed', oldElem[0].cloneNode(true), oldElem[0].tagName);
+                href = oldElem.attr("ML-href") || oldElem.attr("ml-href");
+            }
+            if (!!href) {
+                oldElem[0].setAttributeNS("http://www.w3.org/1999/xlink", 'ML-href', href || "");
+                oldElem[0].setAttributeNS("http://www.w3.org/1999/xlink", 'ML-mark', 'oldElem');
+                oldElem[0].setAttribute('ML-href', href || "");
+                oldElem[0].setAttribute('ML-mark', 'oldElem');
+                oldElem[0].removeAttributeNS("http://www.w3.org/1999/xlink", 'href');
+                oldElem[0].removeAttributeNS("http://www.w3.org/1999/xlink", 'xlink:href');
+                oldElem[0].removeAttribute('href');
+                oldElem[0].removeAttribute('xlink:href');
+
+                newElem.setAttributeNS("http://www.w3.org/1999/xlink", 'ML-href', href || "");
+                newElem.setAttributeNS("http://www.w3.org/1999/xlink", 'ML-mark', 'newElem');
+                newElem.setAttribute('ML-href', href || "");
+                newElem.setAttribute('ML-href-id', `id-${href}`);
+                newElem.setAttribute('ML-mark', 'newElem');
+                newElem.removeAttributeNS("http://www.w3.org/1999/xlink", 'href');
+                newElem.removeAttributeNS("http://www.w3.org/1999/xlink", 'xlink:href');
+                newElem.removeAttribute('href');
+                newElem.removeAttribute('xlink:href');
+
+                console.log('************************** fixSVGNameSpace oldElem image', oldElem[0].cloneNode(true), oldElem[0].tagName);
+                console.log('************************** fixSVGNameSpace newElem image', newElem.cloneNode(true), newElem.tagName);
+                // call img loader on there
+                this.gSC2DataManager.getHtmlTagSrcHook().doHookCallback(href || "", (newHref) => {
+                    console.log('************************** fixSVGNameSpace newElem doHookCallback', href, newHref);
+                    newElem.setAttribute("href", newHref);
+                    newElem.setAttribute('xlink:href', newHref);
+                    newElem.setAttribute('ML-markNew', 'newElem');
+                    newElem.setAttributeNS("http://www.w3.org/1999/xlink", "href", newHref);
+                    newElem.setAttributeNS("http://www.w3.org/1999/xlink", 'xlink:href', newHref);
+                    newElem.setAttributeNS("http://www.w3.org/1999/xlink", 'ML-markNew', 'newElem');
+                    console.log('************************** fixSVGNameSpace oldElem doHookCallback', oldElem[0].cloneNode(true), oldElem[0].tagName);
+                    console.log('************************** fixSVGNameSpace newElem doHookCallback', newElem.cloneNode(true), newElem.tagName);
+                }).catch(Err => console.error(Err));
+                // newElem.setAttributeNS("http://www.w3.org/1999/xlink", "href", href || "");
+            } else {
+                newElem.setAttributeNS("http://www.w3.org/1999/xlink", "href", href || "");
+            }
         }
     }
 
