@@ -37,19 +37,26 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             this,
         );
         this.gSC2DataManager.getHtmlTagSrcHook().addHook('ImgLoaderHooker',
-            async (el: HTMLImageElement | HTMLElement, mlSrc: string) => {
+            async (el: HTMLImageElement | HTMLElement, mlSrc: string, field: string) => {
+                // console.log('[ImageLoaderHook] getHtmlTagSrcHook addHook', [mlSrc, field, el]);
                 const img = await this.getImage(mlSrc);
                 if (img) {
-                    el.setAttribute('src', img);
+                    el.setAttribute(field, img);
                     return true;
                 }
+                // console.log('[ImageLoaderHook] getHtmlTagSrcHook addHook cannot find', [mlSrc, field, el]);
                 return false;
             }
         );
         this.gSC2DataManager.getHtmlTagSrcHook().addReturnModeHook('ImgLoaderReturnModeHooker',
             async (mlSrc: string) => {
+                // console.log('[ImageLoaderHook] getHtmlTagSrcHook addReturnModeHook', [mlSrc]);
                 const img = await this.getImage(mlSrc);
-                return [!!img, mlSrc];
+                if (!img) {
+                    // console.log('[ImageLoaderHook] getHtmlTagSrcHook addReturnModeHook cannot find', [mlSrc]);
+                }
+                // console.log('[ImageLoaderHook] getHtmlTagSrcHook addReturnModeHook get img', [img]);
+                return [!!img, img || mlSrc];
             },
         );
     }
@@ -171,7 +178,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                 }
             }
         }
-        // console.log('[ImageLoaderHook] loadImage not in imgLookupTable', src);
+        // console.log('[ImageLoaderHook] getImage not in imgLookupTable', src);
         for (const hooker of this.sideHooker) {
             try {
                 const r = await hooker.imageGetter(src);
@@ -183,6 +190,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                 this.log.error(`[ImageLoaderHook] getImage sideHooker error: src[${src}] hook[${hooker.hookName}] ${e?.message ? e.message : e}`);
             }
         }
+        // console.log('[ImageLoaderHook] getImage not in sideHooker', src);
         return undefined;
     }
 
