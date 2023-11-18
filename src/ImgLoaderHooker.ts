@@ -43,13 +43,31 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                             el.setAttribute('src', imgString);
                             return true;
                         } catch (e: Error | any) {
-                            console.error('ImageLoaderHook HtmlTagSrcHook replace error', [mlSrc, e]);
-                            this.log.error(`ImageLoaderHook HtmlTagSrcHook replace error: src[${mlSrc}] error[${e?.message ? e.message : e}]`);
+                            console.error('[ImageLoaderHook] ImgLoaderHooker replace error', [mlSrc, e]);
+                            this.log.error(`[ImageLoaderHook] ImgLoaderHooker replace error: src[${mlSrc}] error[${e?.message ? e.message : e}]`);
                         }
                     }
                 }
                 return false;
             }
+        );
+        this.gSC2DataManager.getHtmlTagSrcHook().addReturnModeHook('ImgLoaderReturnModeHooker',
+            async (mlSrc: string) => {
+                if (this.imgLookupTable.has(mlSrc)) {
+                    const n = this.imgLookupTable.get(mlSrc);
+                    if (n) {
+                        try {
+                            // this may throw error
+                            const imgString = await n.imgData.getter.getBase64Image();
+                            return [true, imgString];
+                        } catch (e: Error | any) {
+                            console.error('[ImageLoaderHook] ImgLoaderReturnModeHooker replace error', [mlSrc, e]);
+                            this.log.error(`[ImageLoaderHook] ImgLoaderReturnModeHooker replace error: src[${mlSrc}] error[${e?.message ? e.message : e}]`);
+                        }
+                    }
+                }
+                return [false, mlSrc];
+            },
         );
     }
 
@@ -62,8 +80,8 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         for (const img of mod.imgs) {
             const n = this.imgLookupTable.get(img.path);
             if (n) {
-                console.warn(`[ImageLoaderHook Mod] registerMod duplicate img path:`, [mod.name, img.path, n.modName]);
-                this.log.warn(`[ImageLoaderHook Mod] registerMod duplicate img path: mod[${mod.name}] img[${img.path}] old[${n.modName}]`);
+                console.warn(`[ImageLoaderHook] registerMod duplicate img path:`, [mod.name, img.path, n.modName]);
+                this.log.warn(`[ImageLoaderHook] registerMod duplicate img path: mod[${mod.name}] img[${img.path}] old[${n.modName}]`);
             }
             this.imgLookupTable.set(img.path, {
                 modName: mod.name,
@@ -89,8 +107,8 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             }
             for (const img of mod.imgs) {
                 if (this.imgLookupTable.has(img.path)) {
-                    console.warn(`[ImageLoaderHook Mod] duplicate img path:`, [modName, img.path]);
-                    this.log.warn(`[ImageLoaderHook Mod] duplicate img path: mod[${modName}] img[${img.path}]`);
+                    console.warn(`[ImageLoaderHook] duplicate img path:`, [modName, img.path]);
+                    this.log.warn(`[ImageLoaderHook] duplicate img path: mod[${modName}] img[${img.path}]`);
                 }
                 this.imgLookupTable.set(img.path, {
                     modName,
@@ -103,8 +121,8 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
     public addImages(modImg: ModImg[], modName: string) {
         for (const img of modImg) {
             if (this.imgLookupTable.has(img.path)) {
-                console.warn(`[ImageLoaderHook Mod] addImages duplicate img path:`, [modName, img.path]);
-                this.log.warn(`[ImageLoaderHook Mod] addImages duplicate img path: mod[${modName}] img[${img.path}]`);
+                console.warn(`[ImageLoaderHook] addImages duplicate img path:`, [modName, img.path]);
+                this.log.warn(`[ImageLoaderHook] addImages duplicate img path: mod[${modName}] img[${img.path}]`);
             }
             this.imgLookupTable.set(img.path, {
                 modName,
@@ -121,8 +139,8 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         }
         for (const img of mod.imgs) {
             if (this.imgLookupTable.has(img.path)) {
-                console.warn(`[ImageLoaderHook Mod] forceLoadModImage duplicate img path:`, [mod.name, img.path]);
-                this.log.warn(`[ImageLoaderHook Mod] forceLoadModImage duplicate img path: mod[${mod.name}] img[${img.path}]`);
+                console.warn(`[ImageLoaderHook] forceLoadModImage duplicate img path:`, [mod.name, img.path]);
+                this.log.warn(`[ImageLoaderHook] forceLoadModImage duplicate img path: mod[${mod.name}] img[${img.path}]`);
             }
             this.imgLookupTable.set(img.path, {
                 modName: mod.name,
@@ -205,12 +223,12 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
 
     private setupHook() {
         if (this.hooked) {
-            console.error('[ImageLoaderHook Mod] setupHook() (this.hooked)');
-            this.log.error(`[ImageLoaderHook Mod] setupHook() (this.hooked)`);
+            console.error('[ImageLoaderHook] setupHook() (this.hooked)');
+            this.log.error(`[ImageLoaderHook] setupHook() (this.hooked)`);
             return;
         }
         this.hooked = true;
-        console.log('[ImageLoaderHook Mod] setupHook()');
+        console.log('[ImageLoaderHook] setupHook()');
 
         this.originLoader = Renderer.ImageLoader;
         Renderer.ImageLoader = {
@@ -222,8 +240,8 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
     private waitKDLoadingFinished = () => {
         if (this.waitInitCounter > 1000) {
             // don't wait it
-            console.log('[ImageLoaderHook Mod] (waitInitCounter > 1000) dont wait it');
-            this.log.log(`[ImageLoaderHook Mod] (waitInitCounter > 1000) dont wait it`);
+            console.log('[ImageLoaderHook] (waitInitCounter > 1000) dont wait it');
+            this.log.log(`[ImageLoaderHook] (waitInitCounter > 1000) dont wait it`);
             return;
         }
         if (typeof Renderer === 'undefined') {
@@ -240,8 +258,8 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         // this.waitKDLoadingFinished();
 
         // $(document).one(":passageinit", () => {
-        //     console.log('ImageLoaderHook setupHook passageinit');
-        //     this.log.log(`ImageLoaderHook setupHook passageinit`);
+        //     console.log('[ImageLoaderHook] setupHook passageinit');
+        //     this.log.log(`[ImageLoaderHook] setupHook passageinit`);
         //     this.setupHook();
         // });
     }
