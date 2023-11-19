@@ -313,7 +313,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             let href = oldElem.attr("href") || oldElem.attr("xlink:href") || undefined;
             if (oldElem.attr("ML-href") || oldElem.attr("ml-href") || oldElem.attr("ML-mark")) {
                 // this element is processed
-                console.log('************************** fixSVGNameSpace element is processed', oldElem[0].cloneNode(true), oldElem[0].tagName);
+                // console.log('************************** fixSVGNameSpace element is processed', oldElem[0].cloneNode(true), oldElem[0].tagName);
                 href = oldElem.attr("ML-href") || oldElem.attr("ml-href");
             }
             if (!!href) {
@@ -336,19 +336,19 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                 newElem.removeAttribute('href');
                 newElem.removeAttribute('xlink:href');
 
-                console.log('************************** fixSVGNameSpace oldElem image', oldElem[0].cloneNode(true), oldElem[0].tagName);
-                console.log('************************** fixSVGNameSpace newElem image', newElem.cloneNode(true), newElem.tagName);
+                // console.log('************************** fixSVGNameSpace oldElem image', oldElem[0].cloneNode(true), oldElem[0].tagName);
+                // console.log('************************** fixSVGNameSpace newElem image', newElem.cloneNode(true), newElem.tagName);
                 // call img loader on there
                 this.gSC2DataManager.getHtmlTagSrcHook().doHookCallback(href || "", (newHref) => {
-                    console.log('************************** fixSVGNameSpace newElem doHookCallback', href, newHref);
+                    // console.log('************************** fixSVGNameSpace newElem doHookCallback', href, newHref);
                     newElem.setAttribute("href", newHref);
                     newElem.setAttribute('xlink:href', newHref);
                     newElem.setAttribute('ML-markNew', 'newElem');
                     newElem.setAttributeNS("http://www.w3.org/1999/xlink", "href", newHref);
                     newElem.setAttributeNS("http://www.w3.org/1999/xlink", 'xlink:href', newHref);
                     newElem.setAttributeNS("http://www.w3.org/1999/xlink", 'ML-markNew', 'newElem');
-                    console.log('************************** fixSVGNameSpace oldElem doHookCallback', oldElem[0].cloneNode(true), oldElem[0].tagName);
-                    console.log('************************** fixSVGNameSpace newElem doHookCallback', newElem.cloneNode(true), newElem.tagName);
+                    // console.log('************************** fixSVGNameSpace oldElem doHookCallback', oldElem[0].cloneNode(true), oldElem[0].tagName);
+                    // console.log('************************** fixSVGNameSpace newElem doHookCallback', newElem.cloneNode(true), newElem.tagName);
                 }).catch(Err => console.error(Err));
                 // newElem.setAttributeNS("http://www.w3.org/1999/xlink", "href", href || "");
             } else {
