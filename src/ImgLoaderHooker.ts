@@ -23,8 +23,8 @@ export interface ImgLoaderSideHooker {
     imageGetter: (src: string) => Promise<string | undefined>;
 }
 
-export class ImgLoaderHooker implements AddonPluginHookPointEx {
-    private logger: LogWrapper;
+export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
+    protected logger: LogWrapper;
 
     constructor(
         public thisWindow: Window,
@@ -62,7 +62,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         );
     }
 
-    private async replaceImageInImgTags(img: HTMLImageElement) {
+    protected async replaceImageInImgTags(img: HTMLImageElement) {
         if (img.hasAttribute('ml-src') || img.hasAttribute('ML-src')) {
             // this is processed or processing
             return;
@@ -88,24 +88,6 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             img.setAttribute('src', src);
             console.warn('[ImageLoaderHook] replaceImageInImgTags() Adult Shop Menu cannot find img', [img, src]);
             this.logger.warn(`[ImageLoaderHook] replaceImageInImgTags() Adult Shop Menu cannot find img. [${src}]`);
-        }
-    }
-
-    async whenSC2PassageEnd(passage: Passage, content: HTMLDivElement) {
-        if (passage.title === 'Adult Shop Menu') {
-            console.log('[ImageLoaderHook] whenSC2PassageEnd() Adult Shop Menu', [passage, content]);
-            // same as DoL `window.sexShopGridInit`
-            jQuery(async () => {
-                const imgList = Array.from(content.querySelectorAll('img'));
-                if (imgList.length === 0) {
-                    console.error('[ImageLoaderHook] whenSC2PassageEnd() Adult Shop Menu imgList.length === 0');
-                    this.logger.error(`[ImageLoaderHook] whenSC2PassageEnd() Adult Shop Menu imgList.length === 0`);
-                    return;
-                }
-                await Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
-            });
-        } else {
-            console.log('[ImageLoaderHook] whenSC2PassageEnd() ignore.', [passage, content]);
         }
     }
 
@@ -146,9 +128,9 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         this.logger.error(`[ImageLoaderHook] addSideHooker() failed. invalid hook. hookName[${hooker.hookName}]`);
     }
 
-    private imgLookupTable: Map<string, { modName: string, imgData: ModImg }> = new Map();
+    protected imgLookupTable: Map<string, { modName: string, imgData: ModImg }> = new Map();
 
-    private initLookupTable() {
+    protected initLookupTable() {
         const modListName = this.gModUtils.getModListName();
         for (const modName of modListName) {
             const mod: ModInfo | undefined = this.gModUtils.getMod(modName);
@@ -199,9 +181,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         }
     }
 
-    private hooked = false;
-
-    private originLoader?: (typeof Renderer)['ImageLoader'];
+    protected originLoader?: (typeof Renderer)['ImageLoader'];
 
     async debugGetImg(src: string): Promise<HTMLImageElement | undefined> {
         if (this.imgLookupTable.has(src)) {
@@ -215,7 +195,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         return undefined;
     }
 
-    private async getImage(src: string) {
+    protected async getImage(src: string) {
         if (this.imgLookupTable.has(src)) {
             const n = this.imgLookupTable.get(src);
             if (n) {
@@ -242,7 +222,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         return undefined;
     }
 
-    private async loadImage(
+    protected async loadImage(
         src: string,
         layer: any,
         successCallback: (src: string, layer: any, img: HTMLImageElement) => void,
@@ -299,7 +279,43 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         image.src = src;
     }
 
-    private setupHook() {
+
+}
+
+export class ImgLoaderHooker extends ImgLoaderHookerCore {
+    constructor(
+        public thisWindow: Window,
+        public gSC2DataManager: SC2DataManager,
+        public gModUtils: ModUtils,
+    ) {
+        super(
+            thisWindow,
+            gSC2DataManager,
+            gModUtils,
+        );
+    }
+
+    async whenSC2PassageEnd(passage: Passage, content: HTMLDivElement) {
+        if (passage.title === 'Adult Shop Menu') {
+            console.log('[ImageLoaderHook] whenSC2PassageEnd() Adult Shop Menu', [passage, content]);
+            // same as DoL `window.sexShopGridInit`
+            jQuery(async () => {
+                const imgList = Array.from(content.querySelectorAll('img'));
+                if (imgList.length === 0) {
+                    console.error('[ImageLoaderHook] whenSC2PassageEnd() Adult Shop Menu imgList.length === 0');
+                    this.logger.error(`[ImageLoaderHook] whenSC2PassageEnd() Adult Shop Menu imgList.length === 0`);
+                    return;
+                }
+                await Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
+            });
+        } else {
+            console.log('[ImageLoaderHook] whenSC2PassageEnd() ignore.', [passage, content]);
+        }
+    }
+
+    protected hooked = false;
+
+    protected setupHook() {
         if (this.hooked) {
             console.error('[ImageLoaderHook] setupHook() (this.hooked)');
             this.logger.error(`[ImageLoaderHook] setupHook() (this.hooked)`);
@@ -315,7 +331,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
     }
 
     waitInitCounter = 0;
-    private waitKDLoadingFinished = () => {
+    protected waitKDLoadingFinished = () => {
         if (this.waitInitCounter > 1000) {
             // don't wait it
             console.log('[ImageLoaderHook] (waitInitCounter > 1000) dont wait it');
