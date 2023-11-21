@@ -4,6 +4,7 @@ import type {ModImg, ModInfo} from "../../../dist-BeforeSC2/ModLoader";
 import type {ModZipReader} from "../../../dist-BeforeSC2/ModZipReader";
 import type {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
 import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
+import type {Passage} from "../../../src/BeforeSC2/SugarCube2";
 import {isFunction, isString} from 'lodash';
 
 /**
@@ -23,14 +24,14 @@ export interface ImgLoaderSideHooker {
 }
 
 export class ImgLoaderHooker implements AddonPluginHookPointEx {
-    private log: LogWrapper;
+    private logger: LogWrapper;
 
     constructor(
         public thisWindow: Window,
         public gSC2DataManager: SC2DataManager,
         public gModUtils: ModUtils,
     ) {
-        this.log = this.gModUtils.getLogger();
+        this.logger = this.gModUtils.getLogger();
         this.gModUtils.getAddonPluginManager().registerAddonPlugin(
             'ModLoader DoL ImageLoaderHook',
             'ImageLoaderAddon',
@@ -61,17 +62,64 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         );
     }
 
+    private async replaceImageInImgTags(img: HTMLImageElement) {
+        if (img.hasAttribute('ml-src') || img.hasAttribute('ML-src')) {
+            // this is processed or processing
+            return;
+        }
+        const src = img.getAttribute('src');
+        if (src?.startsWith('data:')) {
+            // ignore it
+            return;
+        }
+        if (!src) {
+            // seems like it state wrong ?
+            console.warn('[ImageLoaderHook] replaceImageInImgTags() Adult Shop Menu img.src is empty', [img]);
+            return;
+        }
+        // ===============
+        img.setAttribute('ml-src', src);
+        img.removeAttribute('src');
+        console.log(this);
+        const m = await this.getImage(src);
+        if (m) {
+            img.setAttribute('src', m);
+        } else {
+            img.setAttribute('src', src);
+            console.warn('[ImageLoaderHook] replaceImageInImgTags() Adult Shop Menu cannot find img', [img, src]);
+            this.logger.warn(`[ImageLoaderHook] replaceImageInImgTags() Adult Shop Menu cannot find img. [${src}]`);
+        }
+    }
+
+    async whenSC2PassageEnd(passage: Passage, content: HTMLDivElement) {
+        if (passage.title === 'Adult Shop Menu') {
+            console.log('[ImageLoaderHook] whenSC2PassageEnd() Adult Shop Menu', [passage, content]);
+            // same as DoL `window.sexShopGridInit`
+            jQuery(async () => {
+                const imgList = Array.from(content.querySelectorAll('img'));
+                if (imgList.length === 0) {
+                    console.error('[ImageLoaderHook] whenSC2PassageEnd() Adult Shop Menu imgList.length === 0');
+                    this.logger.error(`[ImageLoaderHook] whenSC2PassageEnd() Adult Shop Menu imgList.length === 0`);
+                    return;
+                }
+                await Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
+            });
+        } else {
+            console.log('[ImageLoaderHook] whenSC2PassageEnd() ignore.', [passage, content]);
+        }
+    }
+
     async registerMod(addonName: string, mod: ModInfo, modZip: ModZipReader) {
         if (!mod) {
             console.error('registerMod() (!mod)', [addonName, mod]);
-            this.log.error(`registerMod() (!mod): addon[${addonName}] mod[${mod}]`);
+            this.logger.error(`registerMod() (!mod): addon[${addonName}] mod[${mod}]`);
             return;
         }
         for (const img of mod.imgs) {
             const n = this.imgLookupTable.get(img.path);
             if (n) {
                 console.warn(`[ImageLoaderHook] registerMod duplicate img path:`, [mod.name, img.path, n.modName]);
-                this.log.warn(`[ImageLoaderHook] registerMod duplicate img path: mod[${mod.name}] img[${img.path}] old[${n.modName}]`);
+                this.logger.warn(`[ImageLoaderHook] registerMod duplicate img path: mod[${mod.name}] img[${img.path}] old[${n.modName}]`);
             }
             this.imgLookupTable.set(img.path, {
                 modName: mod.name,
@@ -85,17 +133,17 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
     public addSideHooker(hooker: ImgLoaderSideHooker) {
         if (isFunction(hooker)) {
             console.error('[ImageLoaderHook] addSideHooker() hooker is function, the ImageLoaderHook API is changed since 2.7.0 .', [hooker]);
-            this.log.error(`[ImageLoaderHook] addSideHooker() hooker is function, the ImageLoaderHook API is changed since 2.7.0 .`);
+            this.logger.error(`[ImageLoaderHook] addSideHooker() hooker is function, the ImageLoaderHook API is changed since 2.7.0 .`);
             return;
         }
         if (isFunction(hooker.imageLoader) && isFunction(hooker.imageGetter) && isString(hooker.hookName)) {
             console.log('[ImageLoaderHook] addSideHooker() ok', [hooker]);
-            this.log.log(`[ImageLoaderHook] addSideHooker() ok: hookName[${hooker.hookName}]`);
+            this.logger.log(`[ImageLoaderHook] addSideHooker() ok: hookName[${hooker.hookName}]`);
             this.sideHooker.push(hooker);
             return;
         }
         console.error('[ImageLoaderHook] addSideHooker() failed. invalid hook.', [hooker]);
-        this.log.error(`[ImageLoaderHook] addSideHooker() failed. invalid hook. hookName[${hooker.hookName}]`);
+        this.logger.error(`[ImageLoaderHook] addSideHooker() failed. invalid hook. hookName[${hooker.hookName}]`);
     }
 
     private imgLookupTable: Map<string, { modName: string, imgData: ModImg }> = new Map();
@@ -110,7 +158,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             for (const img of mod.imgs) {
                 if (this.imgLookupTable.has(img.path)) {
                     console.warn(`[ImageLoaderHook] duplicate img path:`, [modName, img.path]);
-                    this.log.warn(`[ImageLoaderHook] duplicate img path: mod[${modName}] img[${img.path}]`);
+                    this.logger.warn(`[ImageLoaderHook] duplicate img path: mod[${modName}] img[${img.path}]`);
                 }
                 this.imgLookupTable.set(img.path, {
                     modName,
@@ -124,7 +172,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         for (const img of modImg) {
             if (this.imgLookupTable.has(img.path)) {
                 console.warn(`[ImageLoaderHook] addImages duplicate img path:`, [modName, img.path]);
-                this.log.warn(`[ImageLoaderHook] addImages duplicate img path: mod[${modName}] img[${img.path}]`);
+                this.logger.warn(`[ImageLoaderHook] addImages duplicate img path: mod[${modName}] img[${img.path}]`);
             }
             this.imgLookupTable.set(img.path, {
                 modName,
@@ -136,13 +184,13 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
     public forceLoadModImage(mod: ModInfo, modZip: ModZipReader) {
         if (!mod) {
             console.error('[ImageLoaderHook] forceLoadModImage() (!mod)');
-            this.log.error(`[ImageLoaderHook] forceLoadModImage() (!mod)`);
+            this.logger.error(`[ImageLoaderHook] forceLoadModImage() (!mod)`);
             return;
         }
         for (const img of mod.imgs) {
             if (this.imgLookupTable.has(img.path)) {
                 console.warn(`[ImageLoaderHook] forceLoadModImage duplicate img path:`, [mod.name, img.path]);
-                this.log.warn(`[ImageLoaderHook] forceLoadModImage duplicate img path: mod[${mod.name}] img[${img.path}]`);
+                this.logger.warn(`[ImageLoaderHook] forceLoadModImage duplicate img path: mod[${mod.name}] img[${img.path}]`);
             }
             this.imgLookupTable.set(img.path, {
                 modName: mod.name,
@@ -187,7 +235,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                 }
             } catch (e: Error | any) {
                 console.error('[ImageLoaderHook] getImage sideHooker error', [src, hooker, e,]);
-                this.log.error(`[ImageLoaderHook] getImage sideHooker error: src[${src}] hook[${hooker.hookName}] ${e?.message ? e.message : e}`);
+                this.logger.error(`[ImageLoaderHook] getImage sideHooker error: src[${src}] hook[${hooker.hookName}] ${e?.message ? e.message : e}`);
             }
         }
         // console.log('[ImageLoaderHook] getImage not in sideHooker', src);
@@ -214,7 +262,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                     };
                     image.onerror = (event) => {
                         console.error('[ImageLoaderHook] loadImage replace error', [src]);
-                        this.log.error(`[ImageLoaderHook] loadImage replace error: src[${src}]`);
+                        this.logger.error(`[ImageLoaderHook] loadImage replace error: src[${src}]`);
                         errorCallback(src, layer, event);
                     };
                     image.src = imgString;
@@ -234,7 +282,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
                 }
             } catch (e: Error | any) {
                 console.error('[ImageLoaderHook] loadImage sideHooker error', [src, hooker, e,]);
-                this.log.error(`[ImageLoaderHook] loadImage sideHooker error: src[${src}] hook[${hooker.hookName}] ${e?.message ? e.message : e}`);
+                this.logger.error(`[ImageLoaderHook] loadImage sideHooker error: src[${src}] hook[${hooker.hookName}] ${e?.message ? e.message : e}`);
             }
         }
         // console.log('[ImageLoaderHook] loadImage not in sideHooker', src);
@@ -245,7 +293,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         };
         image.onerror = (event) => {
             console.warn('[ImageLoaderHook] loadImage originLoader error', [src]);
-            this.log.warn(`[ImageLoaderHook] loadImage originLoader error: src[${src}]`);
+            this.logger.warn(`[ImageLoaderHook] loadImage originLoader error: src[${src}]`);
             errorCallback(src, layer, event);
         };
         image.src = src;
@@ -254,7 +302,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
     private setupHook() {
         if (this.hooked) {
             console.error('[ImageLoaderHook] setupHook() (this.hooked)');
-            this.log.error(`[ImageLoaderHook] setupHook() (this.hooked)`);
+            this.logger.error(`[ImageLoaderHook] setupHook() (this.hooked)`);
             return;
         }
         this.hooked = true;
@@ -271,7 +319,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         if (this.waitInitCounter > 1000) {
             // don't wait it
             console.log('[ImageLoaderHook] (waitInitCounter > 1000) dont wait it');
-            this.log.log(`[ImageLoaderHook] (waitInitCounter > 1000) dont wait it`);
+            this.logger.log(`[ImageLoaderHook] (waitInitCounter > 1000) dont wait it`);
             return;
         }
         if (typeof Renderer === 'undefined') {
@@ -289,7 +337,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
 
         // $(document).one(":passageinit", () => {
         //     console.log('[ImageLoaderHook] setupHook passageinit');
-        //     this.log.log(`[ImageLoaderHook] setupHook passageinit`);
+        //     this.logger.log(`[ImageLoaderHook] setupHook passageinit`);
         //     this.setupHook();
         // });
 
@@ -367,13 +415,13 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
         const icon = Macro.get('icon');
         if (!icon) {
             console.error('modifyMacroIcon() cannot find macro icon');
-            this.log.error(`modifyMacroIcon() cannot find macro icon`);
+            this.logger.error(`modifyMacroIcon() cannot find macro icon`);
             return;
         }
         const h = icon.OriginHandlerPassageQBalance;
         if (!h && !isFunction(h)) {
             console.error('modifyMacroIcon() cannot find macro icon handle', [icon, h]);
-            this.log.error(`modifyMacroIcon() cannot find macro icon handle`);
+            this.logger.error(`modifyMacroIcon() cannot find macro icon handle`);
             return;
         }
         const hCode = h.toString();
@@ -389,7 +437,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
 \t}`;
         if (code !== hCode) {
             console.warn('modifyMacroIcon() macro icon handle changed', [icon, h, hCode, code]);
-            this.log.warn(`modifyMacroIcon() macro icon handle changed.`);
+            this.logger.warn(`modifyMacroIcon() macro icon handle changed.`);
         }
         // hCode.replace('this.output.append(iconImg);', `
         // if (typeof window.modSC2DataManager !== 'undefined' &&
@@ -432,6 +480,37 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             },
         });
         console.log('modifyMacroIcon() ok');
+    }
+
+    old_sexShopOnItemClick?: CallableFunction;
+
+    do_hook_dol_sexShopOnItemClick() {
+        const imgList: HTMLImageElement[] = Array.from(this.gModUtils.thisWin.document.querySelectorAll('#ssm_desc_img > img'));
+        if (imgList.length === 0) {
+            console.warn('[ImageLoaderHook] do_hook_dol_sexShopOnItemClick() cannot find img.');
+            this.logger.warn(`[ImageLoaderHook] do_hook_dol_sexShopOnItemClick() cannot find img.`);
+            return;
+        }
+        return Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img));
+    }
+
+    hook_dol_sexShopOnItemClick() {
+        if (this.old_sexShopOnItemClick) {
+            console.error('[ImageLoaderHook] hook_dol_sexShopOnItemClick() (this.old_sexShopOnItemClick), is duplicate hook?');
+            this.logger.error(`[ImageLoaderHook] hook_dol_sexShopOnItemClick() (this.old_sexShopOnItemClick), is duplicate hook?`);
+            return;
+        }
+        if (!window.sexShopOnItemClick) {
+            console.warn('[ImageLoaderHook] hook_dol_sexShopOnItemClick() (!window.sexShopOnItemClick), is DoL valid?');
+            this.logger.warn(`[ImageLoaderHook] hook_dol_sexShopOnItemClick() (!window.sexShopOnItemClick), is DoL valid?`);
+            return;
+        }
+        this.old_sexShopOnItemClick = window.sexShopOnItemClick;
+        window.sexShopOnItemClick = (...arg: any) => {
+            const r = this.old_sexShopOnItemClick!(...arg);
+            this.do_hook_dol_sexShopOnItemClick();
+            return r;
+        }
     }
 
 }

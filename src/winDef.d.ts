@@ -38,5 +38,7 @@ declare global {
                 get: (name: string) => any;
             }
         };
+
+        sexShopOnItemClick: () => void;
     }
 }
