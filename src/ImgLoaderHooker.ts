@@ -491,7 +491,7 @@ export class ImgLoaderHooker implements AddonPluginHookPointEx {
             this.logger.warn(`[ImageLoaderHook] do_hook_dol_sexShopOnItemClick() cannot find img.`);
             return;
         }
-        return Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img));
+        return Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
     }
 
     hook_dol_sexShopOnItemClick() {
