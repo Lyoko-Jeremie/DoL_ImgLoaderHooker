@@ -309,7 +309,7 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
                 await Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
             });
         } else {
-            console.log('[ImageLoaderHook] whenSC2PassageEnd() ignore.', [passage, content]);
+            // console.log('[ImageLoaderHook] whenSC2PassageEnd() ignore.', [passage, content]);
         }
     }
 
