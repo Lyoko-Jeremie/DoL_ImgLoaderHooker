@@ -74,7 +74,7 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         }
         if (!src) {
             // seems like it state wrong ?
-            console.warn('[ImageLoaderHook] replaceImageInImgTags() Adult Shop Menu img.src is empty', [img]);
+            console.warn('[ImageLoaderHook] replaceImageInImgTags() img.src is empty', [img]);
             return;
         }
         // ===============
@@ -82,12 +82,13 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         img.removeAttribute('src');
         console.log(this);
         const m = await this.getImage(src);
+        console.log('[ImageLoaderHook] replaceImageInImgTags() get img', [src, m]);
         if (m) {
             img.setAttribute('src', m);
         } else {
             img.setAttribute('src', src);
-            console.warn('[ImageLoaderHook] replaceImageInImgTags() Adult Shop Menu cannot find img', [img, src]);
-            this.logger.warn(`[ImageLoaderHook] replaceImageInImgTags() Adult Shop Menu cannot find img. [${src}]`);
+            console.warn('[ImageLoaderHook] replaceImageInImgTags() cannot find img', [img, src]);
+            this.logger.warn(`[ImageLoaderHook] replaceImageInImgTags() cannot find img. [${src}]`);
         }
     }
 
@@ -282,6 +283,10 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
 
 }
 
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export class ImgLoaderHooker extends ImgLoaderHookerCore {
     constructor(
         public thisWindow: Window,
@@ -296,14 +301,19 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
     }
 
     async whenSC2PassageEnd(passage: Passage, content: HTMLDivElement) {
-        if (passage.title === 'Adult Shop Menu') {
-            console.log('[ImageLoaderHook] whenSC2PassageEnd() Adult Shop Menu', [passage, content]);
+        if (
+            passage.title === 'Adult Shop Menu' ||
+            passage.title === 'PillCollection'
+        ) {
+            console.log('[ImageLoaderHook] whenSC2PassageEnd() [Adult Shop Menu]/[PillCollection]', [passage, content]);
             // same as DoL `window.sexShopGridInit`
+            // same as DoL `window.addElementToGrid`
             jQuery(async () => {
+                await sleep(1);
                 const imgList = Array.from(content.querySelectorAll('img'));
                 if (imgList.length === 0) {
-                    console.error('[ImageLoaderHook] whenSC2PassageEnd() Adult Shop Menu imgList.length === 0');
-                    this.logger.error(`[ImageLoaderHook] whenSC2PassageEnd() Adult Shop Menu imgList.length === 0`);
+                    console.error(`[ImageLoaderHook] whenSC2PassageEnd() [${passage.title}] imgList.length === 0`);
+                    this.logger.error(`[ImageLoaderHook] whenSC2PassageEnd() [${passage.title}] imgList.length === 0`);
                     return;
                 }
                 await Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
