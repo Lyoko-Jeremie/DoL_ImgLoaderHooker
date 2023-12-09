@@ -82,7 +82,7 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         img.removeAttribute('src');
         console.log(this);
         const m = await this.getImage(src);
-        console.log('[ImageLoaderHook] replaceImageInImgTags() get img', [src, m]);
+        // console.log('[ImageLoaderHook] replaceImageInImgTags() get img', [src, m]);
         if (m) {
             img.setAttribute('src', m);
         } else {
@@ -305,7 +305,7 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
             passage.title === 'Adult Shop Menu' ||
             passage.title === 'PillCollection'
         ) {
-            console.log('[ImageLoaderHook] whenSC2PassageEnd() [Adult Shop Menu]/[PillCollection]', [passage, content]);
+            // console.log('[ImageLoaderHook] whenSC2PassageEnd() [Adult Shop Menu]/[PillCollection]', [passage, content]);
             // same as DoL `window.sexShopGridInit`
             // same as DoL `window.addElementToGrid`
             jQuery(async () => {
