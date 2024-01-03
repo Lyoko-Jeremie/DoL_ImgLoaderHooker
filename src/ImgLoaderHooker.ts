@@ -300,11 +300,15 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         );
     }
 
-    public dynamicImageTagReplaceTable: Set<string> = new Set<string>([
+    protected dynamicImageTagReplaceTable: Set<string> = new Set<string>([
         'Adult Shop Menu',
         'PillCollection',
         'Sextoys Inventory',
     ]);
+
+    public addDynamicImageTagReplacePassage(passageName: string) {
+        this.dynamicImageTagReplaceTable.add(passageName);
+    }
 
     async whenSC2PassageEnd(passage: Passage, content: HTMLDivElement) {
         if (this.dynamicImageTagReplaceTable.has(passage.title)) {
