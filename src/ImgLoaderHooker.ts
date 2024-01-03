@@ -300,11 +300,16 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         );
     }
 
+    public dynamicImageTagReplaceTable: Set<string> = new Set<string>([
+        'Adult Shop Menu',
+        'PillCollection',
+        'Sextoys Inventory',
+    ]);
+
     async whenSC2PassageEnd(passage: Passage, content: HTMLDivElement) {
-        if (
-            passage.title === 'Adult Shop Menu' ||
-            passage.title === 'PillCollection'
-        ) {
+        if (this.dynamicImageTagReplaceTable.has(passage.title)) {
+            // :: this passage need to run dynamic replace task
+
             // console.log('[ImageLoaderHook] whenSC2PassageEnd() [Adult Shop Menu]/[PillCollection]', [passage, content]);
             // same as DoL `window.sexShopGridInit`
             // same as DoL `window.addElementToGrid`
@@ -319,7 +324,24 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
                 await Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
             });
         } else {
-            // console.log('[ImageLoaderHook] whenSC2PassageEnd() ignore.', [passage, content]);
+            // :: do the check process to carefully and notice this passage have some img maybe need replace
+            jQuery(async () => {
+                await sleep(1);
+                const imgList = Array.from(content.querySelectorAll('img'));
+                const imgNotHookedList = imgList.filter(img =>
+                    !(
+                        img.hasAttribute('ml-src') ||
+                        img.hasAttribute('ML-src') ||
+                        img.src.startsWith('data:')
+                    )
+                );
+                if (imgNotHookedList.length !== 0) {
+                    console.warn(`[ImageLoaderHook] whenSC2PassageEnd() find some img tag on [${passage.title}] but not hooked`, [passage, imgNotHookedList, imgList]);
+                    this.logger.warn(`[ImageLoaderHook] whenSC2PassageEnd() find [${imgNotHookedList.length}] img tag on [${passage.title}] but not hooked`);
+                    return;
+                }
+                return;
+            });
         }
     }
 
