@@ -303,7 +303,8 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
     async whenSC2PassageEnd(passage: Passage, content: HTMLDivElement) {
         if (
             passage.title === 'Adult Shop Menu' ||
-            passage.title === 'PillCollection'
+            passage.title === 'PillCollection' ||
+            passage.title === 'Sextoys Inventory'
         ) {
             // console.log('[ImageLoaderHook] whenSC2PassageEnd() [Adult Shop Menu]/[PillCollection]', [passage, content]);
             // same as DoL `window.sexShopGridInit`
