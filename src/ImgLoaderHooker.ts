@@ -304,6 +304,7 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         'Adult Shop Menu',
         'PillCollection',
         'Sextoys Inventory',
+        'FeatsUI'
     ]);
 
     public addDynamicImageTagReplacePassage(passageName: string) {
