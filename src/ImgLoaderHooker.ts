@@ -482,7 +482,7 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
 \t\tif (!V.options.images) return;
 \t\tconst name = typeof this.args[0] === "string" ? this.args[0] : "error";
 \t\tconst iconImg = document.createElement("img");
-\t\ticonImg.className = "icon";
+\t\ticonImg.className = "icon" + (this.args.includes("infront") ? " infront" : "");
 \t\ticonImg.src = "img/misc/icon/" + name;
 \t\tthis.output.append(iconImg);
 \t\t// append a whitespace for compatibility with old icon behavior
@@ -509,11 +509,11 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         // console.log('icon', icon);
         Macro.delete('icon');
         Macro.add("icon", {
-            handler: function () {
+            handler() {
                 if (!V.options.images) return;
                 const name = typeof this.args[0] === "string" ? this.args[0] : "error";
                 const iconImg = document.createElement("img");
-                iconImg.className = "icon";
+                iconImg.className = "icon" + (this.args.includes("infront") ? " infront" : "");
                 iconImg.src = "img/misc/icon/" + name;
 
                 if (typeof window.modSC2DataManager !== 'undefined' &&
