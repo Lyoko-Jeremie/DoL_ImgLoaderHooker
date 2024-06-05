@@ -537,70 +537,32 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         console.log('modifyMacroIcon() ok');
     }
 
-    old_sexShopOnItemClick?: CallableFunction;
+    simpleDolFunctionHook: SimpleDolFunctionHook = new SimpleDolFunctionHook();
 
-    do_hook_dol_sexShopOnItemClick() {
-        console.log('[ImageLoaderHook] do_hook_dol_sexShopOnItemClick()');
-        const imgList: HTMLImageElement[] = Array.from(this.gModUtils.thisWin.document.querySelectorAll('#ssm_desc_img > img'));
-        if (imgList.length === 0) {
-            console.warn('[ImageLoaderHook] do_hook_dol_sexShopOnItemClick() cannot find img.');
-            this.logger.warn(`[ImageLoaderHook] do_hook_dol_sexShopOnItemClick() cannot find img.`);
-            return;
-        }
-        return Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
-    }
+    hook_dol_DolFunctionHook() {
 
-    hook_dol_sexShopOnItemClick() {
-        console.log('[ImageLoaderHook] hook_dol_sexShopOnItemClick()');
-        if (this.old_sexShopOnItemClick) {
-            console.error('[ImageLoaderHook] hook_dol_sexShopOnItemClick() (this.old_sexShopOnItemClick), is duplicate hook?');
-            this.logger.error(`[ImageLoaderHook] hook_dol_sexShopOnItemClick() (this.old_sexShopOnItemClick), is duplicate hook?`);
-            return;
-        }
-        if (!window.sexShopOnItemClick) {
-            console.warn('[ImageLoaderHook] hook_dol_sexShopOnItemClick() (!window.sexShopOnItemClick), is DoL valid?');
-            this.logger.warn(`[ImageLoaderHook] hook_dol_sexShopOnItemClick() (!window.sexShopOnItemClick), is DoL valid?`);
-            return;
-        }
-        this.old_sexShopOnItemClick = window.sexShopOnItemClick;
-        window.sexShopOnItemClick = (...arg: any) => {
-            const r = this.old_sexShopOnItemClick!(...arg);
-            this.do_hook_dol_sexShopOnItemClick();
-            return r;
-        }
-    }
+        this.simpleDolFunctionHook.hook('sexShopOnItemClick', () => {
+            console.log('[ImageLoaderHook] do_hook_dol_sexShopOnItemClick()');
+            const imgList: HTMLImageElement[] = Array.from(this.gModUtils.thisWin.document.querySelectorAll('#ssm_desc_img > img'));
+            if (imgList.length === 0) {
+                console.warn('[ImageLoaderHook] do_hook_dol_sexShopOnItemClick() cannot find img.');
+                this.logger.warn(`[ImageLoaderHook] do_hook_dol_sexShopOnItemClick() cannot find img.`);
+                return;
+            }
+            return Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
+        });
 
-    old_sexToysInventoryOnItemClick?: CallableFunction;
+        this.simpleDolFunctionHook.hook('sexToysInventoryOnItemClick', () => {
+            console.log('[ImageLoaderHook] do_hook_dol_sexToysInventoryOnItemClick()');
+            const imgList: HTMLImageElement[] = Array.from(this.gModUtils.thisWin.document.querySelectorAll('#sti_desc_img > img'));
+            if (imgList.length === 0) {
+                console.warn('[ImageLoaderHook] do_hook_dol_sexToysInventoryOnItemClick() cannot find img.');
+                this.logger.warn(`[ImageLoaderHook] do_hook_dol_sexToysInventoryOnItemClick() cannot find img.`);
+                return;
+            }
+            return Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
+        });
 
-    do_hook_dol_sexToysInventoryOnItemClick() {
-        console.log('[ImageLoaderHook] do_hook_dol_sexToysInventoryOnItemClick()');
-        const imgList: HTMLImageElement[] = Array.from(this.gModUtils.thisWin.document.querySelectorAll('#sti_desc_img > img'));
-        if (imgList.length === 0) {
-            console.warn('[ImageLoaderHook] do_hook_dol_sexToysInventoryOnItemClick() cannot find img.');
-            this.logger.warn(`[ImageLoaderHook] do_hook_dol_sexToysInventoryOnItemClick() cannot find img.`);
-            return;
-        }
-        return Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
-    }
-
-    hook_dol_sexToysInventoryOnItemClick() {
-        console.log('[ImageLoaderHook] hook_dol_sexToysInventoryOnItemClick()');
-        if (this.old_sexToysInventoryOnItemClick) {
-            console.error('[ImageLoaderHook] hook_dol_sexShopOnItemClick() (this.old_sexToysInventoryOnItemClick), is duplicate hook?');
-            this.logger.error(`[ImageLoaderHook] hook_dol_sexShopOnItemClick() (this.old_sexToysInventoryOnItemClick), is duplicate hook?`);
-            return;
-        }
-        if (!window.sexToysInventoryOnItemClick) {
-            console.warn('[ImageLoaderHook] hook_dol_sexShopOnItemClick() (!window.sexToysInventoryOnItemClick), is DoL valid?');
-            this.logger.warn(`[ImageLoaderHook] hook_dol_sexShopOnItemClick() (!window.sexToysInventoryOnItemClick), is DoL valid?`);
-            return;
-        }
-        this.old_sexToysInventoryOnItemClick = window.sexToysInventoryOnItemClick;
-        window.sexToysInventoryOnItemClick = (...arg: any) => {
-            const r = this.old_sexToysInventoryOnItemClick!(...arg);
-            this.do_hook_dol_sexToysInventoryOnItemClick();
-            return r;
-        }
     }
 
 }
@@ -638,6 +600,7 @@ class SimpleDolFunctionHook {
             hookFunction: hookFunction,
         };
         this.table.set(windowFunctionString, h);
+        console.log('[ImageLoaderHook][SimpleDolFunctionHook] hook() ok', [windowFunctionString, h]);
     }
 
 }
