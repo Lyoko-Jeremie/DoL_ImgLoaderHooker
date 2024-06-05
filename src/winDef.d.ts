@@ -40,5 +40,6 @@ declare global {
         };
 
         sexShopOnItemClick: () => void;
+        sexToysInventoryOnItemClick: (index, category) => void;
     }
 }

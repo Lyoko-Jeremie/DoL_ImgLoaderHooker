@@ -312,6 +312,7 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
     }
 
     async whenSC2PassageEnd(passage: Passage, content: HTMLDivElement) {
+        // console.log('[ImageLoaderHook] whenSC2PassageEnd()', [passage, content]);
         if (this.dynamicImageTagReplaceTable.has(passage.title)) {
             // :: this passage need to run dynamic replace task
 
@@ -321,6 +322,7 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
             jQuery(async () => {
                 await sleep(1);
                 const imgList = Array.from(content.querySelectorAll('img'));
+                // console.log("[ImageLoaderHook] this.dynamicImageTagReplaceTable.has(passage.title)", [passage.title, imgList]);
                 if (imgList.length === 0) {
                     console.error(`[ImageLoaderHook] whenSC2PassageEnd() [${passage.title}] imgList.length === 0`);
                     this.logger.error(`[ImageLoaderHook] whenSC2PassageEnd() [${passage.title}] imgList.length === 0`);
@@ -538,6 +540,7 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
     old_sexShopOnItemClick?: CallableFunction;
 
     do_hook_dol_sexShopOnItemClick() {
+        console.log('[ImageLoaderHook] do_hook_dol_sexShopOnItemClick()');
         const imgList: HTMLImageElement[] = Array.from(this.gModUtils.thisWin.document.querySelectorAll('#ssm_desc_img > img'));
         if (imgList.length === 0) {
             console.warn('[ImageLoaderHook] do_hook_dol_sexShopOnItemClick() cannot find img.');
@@ -548,6 +551,7 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
     }
 
     hook_dol_sexShopOnItemClick() {
+        console.log('[ImageLoaderHook] hook_dol_sexShopOnItemClick()');
         if (this.old_sexShopOnItemClick) {
             console.error('[ImageLoaderHook] hook_dol_sexShopOnItemClick() (this.old_sexShopOnItemClick), is duplicate hook?');
             this.logger.error(`[ImageLoaderHook] hook_dol_sexShopOnItemClick() (this.old_sexShopOnItemClick), is duplicate hook?`);
@@ -564,6 +568,76 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
             this.do_hook_dol_sexShopOnItemClick();
             return r;
         }
+    }
+
+    old_sexToysInventoryOnItemClick?: CallableFunction;
+
+    do_hook_dol_sexToysInventoryOnItemClick() {
+        console.log('[ImageLoaderHook] do_hook_dol_sexToysInventoryOnItemClick()');
+        const imgList: HTMLImageElement[] = Array.from(this.gModUtils.thisWin.document.querySelectorAll('#sti_desc_img > img'));
+        if (imgList.length === 0) {
+            console.warn('[ImageLoaderHook] do_hook_dol_sexToysInventoryOnItemClick() cannot find img.');
+            this.logger.warn(`[ImageLoaderHook] do_hook_dol_sexToysInventoryOnItemClick() cannot find img.`);
+            return;
+        }
+        return Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
+    }
+
+    hook_dol_sexToysInventoryOnItemClick() {
+        console.log('[ImageLoaderHook] hook_dol_sexToysInventoryOnItemClick()');
+        if (this.old_sexToysInventoryOnItemClick) {
+            console.error('[ImageLoaderHook] hook_dol_sexShopOnItemClick() (this.old_sexToysInventoryOnItemClick), is duplicate hook?');
+            this.logger.error(`[ImageLoaderHook] hook_dol_sexShopOnItemClick() (this.old_sexToysInventoryOnItemClick), is duplicate hook?`);
+            return;
+        }
+        if (!window.sexToysInventoryOnItemClick) {
+            console.warn('[ImageLoaderHook] hook_dol_sexShopOnItemClick() (!window.sexToysInventoryOnItemClick), is DoL valid?');
+            this.logger.warn(`[ImageLoaderHook] hook_dol_sexShopOnItemClick() (!window.sexToysInventoryOnItemClick), is DoL valid?`);
+            return;
+        }
+        this.old_sexToysInventoryOnItemClick = window.sexToysInventoryOnItemClick;
+        window.sexToysInventoryOnItemClick = (...arg: any) => {
+            const r = this.old_sexToysInventoryOnItemClick!(...arg);
+            this.do_hook_dol_sexToysInventoryOnItemClick();
+            return r;
+        }
+    }
+
+}
+
+interface SimpleDolFunctionHookItem {
+    windowFunctionString: string;
+    oldFunction: CallableFunction;
+    replaceFunction: CallableFunction;
+    hookFunction: CallableFunction;
+}
+
+class SimpleDolFunctionHook {
+    table: Map<string, SimpleDolFunctionHookItem> = new Map<string, SimpleDolFunctionHookItem>();
+
+    hook(windowFunctionString: string, hookFunction: CallableFunction) {
+        if (this.table.has(windowFunctionString)) {
+            console.error('[ImageLoaderHook][SimpleDolFunctionHook] hook() duplicate hook', [windowFunctionString]);
+            return;
+        }
+        const oldFunction = (window as any)[windowFunctionString];
+        if (!oldFunction) {
+            console.error('[ImageLoaderHook][SimpleDolFunctionHook] hook() cannot find windowFunction', [windowFunctionString]);
+            return;
+        }
+        const replaceFunction = (...arg: any) => {
+            const r = oldFunction(...arg);
+            hookFunction();
+            return r;
+        };
+        (window as any)[windowFunctionString] = replaceFunction;
+        const h: SimpleDolFunctionHookItem = {
+            windowFunctionString: windowFunctionString,
+            oldFunction: oldFunction,
+            replaceFunction: replaceFunction,
+            hookFunction: hookFunction,
+        };
+        this.table.set(windowFunctionString, h);
     }
 
 }
