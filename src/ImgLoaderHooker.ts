@@ -563,6 +563,17 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
             return Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
         });
 
+        this.simpleDolFunctionHook.hook('onHomePillItemClick', () => {
+            console.log('[ImageLoaderHook] do_hook_dol_onHomePillItemClick()');
+            const imgList: HTMLImageElement[] = Array.from(this.gModUtils.thisWin.document.querySelectorAll('#hpi_desc_img > img'));
+            if (imgList.length === 0) {
+                console.warn('[ImageLoaderHook] do_hook_dol_onHomePillItemClick() cannot find img.');
+                this.logger.warn(`[ImageLoaderHook] do_hook_dol_onHomePillItemClick() cannot find img.`);
+                return;
+            }
+            return Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
+        });
+
     }
 
 }
