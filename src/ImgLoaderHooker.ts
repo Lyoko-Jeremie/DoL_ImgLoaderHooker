@@ -588,7 +588,6 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
 
                 // get the HTMLImageElement ref from JQuery Object
                 const iconImgNodeRef: HTMLImageElement = iconImg[0];
-                console.log('iconImgNodeRef', iconImgNodeRef);
 
                 if (typeof window.modSC2DataManager !== 'undefined' &&
                     typeof window.modSC2DataManager.getHtmlTagSrcHook?.()?.doHook !== 'undefined') {
