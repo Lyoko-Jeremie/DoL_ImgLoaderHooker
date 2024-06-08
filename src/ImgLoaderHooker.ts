@@ -343,7 +343,10 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
                     )
                 );
                 if (imgNotHookedList.length !== 0) {
-                    console.warn(`[ImageLoaderHook] whenSC2PassageEnd() find some img tag on [${passage.title}] but not hooked`, [passage, imgNotHookedList, imgList]);
+                    console.warn(`[ImageLoaderHook] whenSC2PassageEnd() find some img tag on [${passage.title}] but not hooked`, [
+                        passage, imgNotHookedList, imgList,
+                        imgNotHookedList.map(img => img.src)
+                    ]);
                     this.logger.warn(`[ImageLoaderHook] whenSC2PassageEnd() find [${imgNotHookedList.length}] img tag on [${passage.title}] but not hooked`);
                     return;
                 }
@@ -469,14 +472,14 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         // console.log('window.SugarCube', window.SugarCube);
         const icon = Macro.get('icon');
         if (!icon) {
-            console.error('modifyMacroIcon() cannot find macro icon');
-            this.logger.error(`modifyMacroIcon() cannot find macro icon`);
+            console.error('modifyMacroIcon() cannot find macro [icon]');
+            this.logger.error(`modifyMacroIcon() cannot find macro [icon]`);
             return;
         }
         const h = icon.OriginHandlerPassageQBalance;
         if (!h && !isFunction(h)) {
-            console.error('modifyMacroIcon() cannot find macro icon handle', [icon, h]);
-            this.logger.error(`modifyMacroIcon() cannot find macro icon handle`);
+            console.error('modifyMacroIcon() cannot find macro [icon] handle', [icon, h]);
+            this.logger.error(`modifyMacroIcon() cannot find macro [icon] handle`);
             return;
         }
         const hCode = h.toString();
@@ -491,8 +494,8 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
 \t\tif (!this.args.includes("nowhitespace")) this.output.append(" ");
 \t}`;
         if (code !== hCode) {
-            console.warn('modifyMacroIcon() macro icon handle changed', [icon, h, hCode, code]);
-            this.logger.warn(`modifyMacroIcon() macro icon handle changed.`);
+            console.warn('modifyMacroIcon() macro [icon] handle changed', [icon, h, hCode, code]);
+            this.logger.warn(`modifyMacroIcon() macro [icon] handle changed.`);
         }
         // hCode.replace('this.output.append(iconImg);', `
         // if (typeof window.modSC2DataManager !== 'undefined' &&
@@ -534,7 +537,75 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
                 if (!this.args.includes("nowhitespace")) this.output.append(" ");
             },
         });
-        console.log('modifyMacroIcon() ok');
+        console.log('modifyMacroIcon() [icon] ok');
+    }
+
+    modifyMacroWeatherIcon(Macro: any) {
+        console.log('modifyMacroWeatherIcon() start');
+        // console.log('window.SugarCube', window.SugarCube);
+        const weatherIcon = Macro.get('weatherIcon');
+        if (!weatherIcon) {
+            console.error('modifyMacroWeatherIcon() cannot find macro [weatherIcon]');
+            this.logger.error(`modifyMacroWeatherIcon() cannot find macro [weatherIcon]`);
+            return;
+        }
+        const h = weatherIcon.OriginHandlerPassageQBalance;
+        if (!h && !isFunction(h)) {
+            console.error('modifyMacroWeatherIcon() cannot find macro [weatherIcon]', [weatherIcon, h]);
+            this.logger.error(`modifyMacroWeatherIcon() cannot find macro [weatherIcon]`);
+            return;
+        }
+        const hCode = h.toString();
+        const code = `handler() {
+\t\tconst iconDiv = $("<div />", { id: "weatherIcon" });
+\t\tconst iconImg = $("<img />");
+
+\t\tconst dayState = Weather.bloodMoon ? "blood" : Weather.dayState === "night" ? "night" : "day";
+\t\tconst weatherState = resolveValue(Weather.type.iconType, "clear");
+\t\tconst path = \`img/misc/icon/weather/$\{dayState}_$\{weatherState}.png\`;
+
+\t\ticonImg.attr("src", path);
+\t\tWeather.Tooltips.skybox(iconImg);
+\t\ticonDiv.append(iconImg);
+\t\ticonDiv.appendTo(this.output);
+\t}`;
+        if (code !== hCode) {
+            console.warn('modifyMacroWeatherIcon() macro [weatherIcon] handle changed', [weatherIcon, h, hCode, code]);
+            this.logger.warn(`modifyMacroWeatherIcon() macro [weatherIcon] handle changed.`);
+        }
+        Macro.delete('weatherIcon');
+        Macro.add("weatherIcon", {
+            handler() {
+                const iconDiv = $("<div />", {id: "weatherIcon"});
+                const iconImg/*: JQuery<HTMLImageElement>*/ = $("<img />");
+
+                const dayState = Weather.bloodMoon ? "blood" : Weather.dayState === "night" ? "night" : "day";
+                const weatherState = resolveValue(window.Weather.type.iconType, "clear");
+                const path = `img/misc/icon/weather/${dayState}_${weatherState}.png`;
+
+                iconImg.attr("src", path);
+                Weather.Tooltips.skybox(iconImg);
+
+                // get the HTMLImageElement ref from JQuery Object
+                const iconImgNodeRef: HTMLImageElement = iconImg[0];
+                console.log('iconImgNodeRef', iconImgNodeRef);
+
+                if (typeof window.modSC2DataManager !== 'undefined' &&
+                    typeof window.modSC2DataManager.getHtmlTagSrcHook?.()?.doHook !== 'undefined') {
+                    if (iconImgNodeRef.tagName.toLowerCase() === 'img' && !iconImgNodeRef.getAttribute('src')?.startsWith('data:')) {
+                        // need check the src is not "data:" URI
+                        iconImgNodeRef.setAttribute('ML-src', iconImgNodeRef.getAttribute('src')!);
+                        iconImgNodeRef.removeAttribute('src');
+                        // call img loader on there
+                        window.modSC2DataManager.getHtmlTagSrcHook().doHook(iconImgNodeRef).catch(E => console.error(E));
+                    }
+                }
+
+                iconDiv.append(iconImg);
+                iconDiv.appendTo(this.output);
+            },
+        });
+        console.log('modifyMacroWeatherIcon() [weatherIcon] ok');
     }
 
     simpleDolFunctionHook: SimpleDolFunctionHook = new SimpleDolFunctionHook();
