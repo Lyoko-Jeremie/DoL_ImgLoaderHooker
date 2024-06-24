@@ -1,12 +1,13 @@
 {
   "name": "ModLoader DoL ImageLoaderHook",
-  "version": "2.10.8",
+  "version": "2.10.9",
   "styleFileList": [
   ],
   "scriptFileList_earlyload": [
   ],
   "scriptFileList_inject_early": [
-    "dist/ImageLoaderHook.mod.js"
+    "dist/ImageLoaderHook.mod.js",
+    "dist/inject_early/inject_early.js"
   ],
   "scriptFileList_preload": [
     "dist/preload/preload.js"
