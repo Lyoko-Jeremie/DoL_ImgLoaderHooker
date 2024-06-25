@@ -1,6 +1,6 @@
 {
   "name": "ModLoader DoL ImageLoaderHook",
-  "version": "2.10.10",
+  "version": "2.10.11",
   "styleFileList": [
   ],
   "scriptFileList_earlyload": [

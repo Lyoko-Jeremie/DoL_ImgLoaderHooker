@@ -41,7 +41,8 @@
                             // 将缓存的图片数据赋值给原始 img 对象
                             thisPtr.width = cachedImage.width;
                             thisPtr.height = cachedImage.height;
-                            thisPtr.src = imgString;
+                            // super.src = imgString;
+                            thisPtr.setAttribute('src', imgString);
 
                             // // 手动触发原始 img 对象的 onload 事件
                             // if (typeof img.onload === 'function') {
