@@ -5,6 +5,7 @@ import type {ModZipReader} from "../../../dist-BeforeSC2/ModZipReader";
 import type {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
 import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
 import {isFunction, isString} from 'lodash';
+import {CssReplacer} from "./CssReplacer";
 
 /**
  * @return Promise<boolean>      Promise<true> if handle by this hooker, otherwise Promise<false>.
@@ -59,6 +60,17 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
                 return [!!img, img || mlSrc];
             },
         );
+        this.cssReplacer = new CssReplacer(thisWindow, gSC2DataManager, gModUtils);
+    }
+
+    cssReplacer: CssReplacer;
+
+    public async replaceStyleSheets() {
+        await this.cssReplacer.replaceStyleSheets();
+    }
+
+    async whenSC2StoryReady(): Promise<void> {
+        await this.replaceStyleSheets();
     }
 
     protected async replaceImageInImgTags(img: HTMLImageElement) {
