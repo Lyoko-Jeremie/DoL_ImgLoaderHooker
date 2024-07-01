@@ -63,6 +63,10 @@ declare global {
 
     interface Window {
         resolveValue: typeof resolveValue;
+
+        gainSchoolStar: (variable: string) => DocumentFragment;
     }
+
+    var gainSchoolStar: (variable: string) => DocumentFragment;
 
 }

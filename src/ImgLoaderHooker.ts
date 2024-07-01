@@ -369,4 +369,45 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
 
     }
 
+    old_gainSchoolStar?: (variable: string) => DocumentFragment;
+    new_gainSchoolStar?: (variable: string) => DocumentFragment;
+
+    hook_dol_gainSchoolStar() {
+        if (this.old_gainSchoolStar) {
+            console.error('[ImageLoaderHook] hook_dol_gainSchoolStar() is patched', [this.old_gainSchoolStar]);
+            this.logger.error(`[ImageLoaderHook] hook_dol_gainSchoolStar() is patched.`);
+            return;
+        }
+        // console.log('[ImageLoaderHook] hook_dol_gainSchoolStar() gainSchoolStar',
+        //     [window.gainSchoolStar, [window.gainSchoolStar.toString()], gainSchoolStar, [gainSchoolStar.toString()]]);
+        this.old_gainSchoolStar = (window as any)['gainSchoolStar'] || gainSchoolStar;
+        this.new_gainSchoolStar = (variable: string) => {
+            // console.log('[ImageLoaderHook] hook_dol_gainSchoolStar() new_gainSchoolStar gainSchoolStar',
+            //     [window.gainSchoolStar, [window.gainSchoolStar.toString()], gainSchoolStar, [gainSchoolStar.toString()]]);
+            const fragment = this.old_gainSchoolStar!(variable) as DocumentFragment;
+            const cL = Array.from(fragment.childNodes);
+            // console.log('[ImageLoaderHook] hook_dol_gainSchoolStar() ret', [fragment, cL]);
+            for (const node of cL) {
+                if (node instanceof HTMLImageElement) {
+                    if (node.tagName.toLowerCase() === 'img' && !node.getAttribute('src')?.startsWith('data:')) {
+                        // need check the src is not "data:" URI
+                        node.setAttribute('ML-src', node.getAttribute('src')!);
+                        node.removeAttribute('src');
+                        this.gSC2DataManager.getHtmlTagSrcHook().doHook(node).catch(E => console.error(E));
+                    }
+                }
+            }
+            return fragment;
+        };
+        (window as any)['gainSchoolStar'] = this.new_gainSchoolStar;
+        console.log('[ImageLoaderHook] hook_dol_gainSchoolStar() ok',
+            // [window.gainSchoolStar, [window.gainSchoolStar.toString()],
+            //     gainSchoolStar, [gainSchoolStar.toString()],
+            //     this.old_gainSchoolStar, [this.old_gainSchoolStar?.toString()],
+            //     this.new_gainSchoolStar, [this.new_gainSchoolStar?.toString()],
+            // ],
+        );
+        return `gainSchoolStar = window.modImgLoaderHooker.new_gainSchoolStar;`;
+    }
+
 }
