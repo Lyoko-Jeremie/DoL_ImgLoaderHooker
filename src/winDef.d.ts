@@ -7,9 +7,9 @@ declare global {
     var Renderer: {
         ImageLoader: {
             loadImage(
-                src: string,
+                src: string | HTMLCanvasElement,
                 layer: any,
-                successCallback: (src: string, layer: any, img: HTMLImageElement) => void,
+                successCallback: (src: string | HTMLCanvasElement, layer: any, img: HTMLImageElement | HTMLCanvasElement) => void,
                 errorCallback: (src: string, layer: any, event: any) => void,
             ): void;
         },
