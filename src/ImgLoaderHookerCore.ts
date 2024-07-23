@@ -235,11 +235,15 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
     }
 
     protected async loadImage(
-        src: string,
+        src: string | HTMLCanvasElement,
         layer: any,
-        successCallback: (src: string, layer: any, img: HTMLImageElement) => void,
+        successCallback: (src: string | HTMLCanvasElement, layer: any, img: HTMLImageElement | HTMLCanvasElement) => void,
         errorCallback: (src: string, layer: any, event: any) => void,
     ) {
+        if (src instanceof HTMLCanvasElement) {
+            successCallback(src, layer, src);
+            return;
+        }
         // console.log('[ImageLoaderHook] loadImage', src);
         if (this.imgLookupTable.has(src)) {
             const n = this.imgLookupTable.get(src);
