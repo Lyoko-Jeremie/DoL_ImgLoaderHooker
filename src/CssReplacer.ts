@@ -62,8 +62,17 @@ export class CssReplacer {
                 ++countOk;
             } catch (e) {
                 ++countError;
-                console.warn(`[ImageLoaderHook][CssReplacer] Could not access rules for stylesheet: ${styleSheet.href}`);
-                console.warn(e);
+                if (e instanceof DOMException &&
+                    (
+                        e.message.includes('Not allowed to access cross-origin stylesheet') ||
+                        e.message.includes('Cannot access rules')
+                    )
+                ) {
+                    console.log(`[ImageLoaderHook][CssReplacer] This is a cross-origin stylesheet. Cannot access. ignore.`, [styleSheet.href]);
+                } else {
+                    console.warn(`[ImageLoaderHook][CssReplacer] Could not access rules for stylesheet: ${styleSheet.href}`);
+                    console.warn(e);
+                }
             }
         }
         console.log(`[ImageLoaderHook][CssReplacer] replaceStyleSheets() done. `
