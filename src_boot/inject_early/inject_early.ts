@@ -12,6 +12,10 @@
         // @ts-ignore
         window.OriginalImageConstructor = OriginalImage;
 
+        if (window.modImgLoaderHooker?.OriginalImageConstructor) {
+            window.modImgLoaderHooker.OriginalImageConstructor = OriginalImage;
+        }
+
         class NewImage extends OriginalImage {
             _originalImageObject?: HTMLImageElement;
 

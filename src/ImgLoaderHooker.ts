@@ -89,10 +89,10 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         this.hooked = true;
         console.log('[ImageLoaderHook] setupHook()');
 
-        this.originLoader = Renderer.ImageLoader;
-        Renderer.ImageLoader = {
-            loadImage: this.loadImage.bind(this),
-        };
+        // this.originLoader = Renderer.ImageLoader;
+        // Renderer.ImageLoader = {
+        //     loadImage: this.loadImage.bind(this),
+        // };
     }
 
     waitInitCounter = 0;
@@ -112,105 +112,105 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         console.log('waitKDLoadingFinished ok');
     };
 
-    protected async loadImage(
-        src: string | HTMLCanvasElement,
-        layer: any,
-        successCallback: (src: string | HTMLCanvasElement, layer: any, img: HTMLImageElement | HTMLCanvasElement) => void,
-        errorCallback: (src: string, layer: any, event: any) => void,
-    ) {
-        const rescaleImageToCanvasHeight = (image: HTMLImageElement | HTMLCanvasElement, targetHeight: number) => {
-            // code from origin game
-            const createCanvas = (w: number, h: number, fill?: string | CanvasGradient | CanvasPattern | undefined) => {
-                let c = document.createElement("canvas");
-                c.width = w;
-                c.height = h;
-                let c2d = c.getContext('2d');
-                if (!c2d) {
-                    throw new Error('Cannot get 2d context');
-                }
-                if (fill) {
-                    c2d.fillStyle = fill;
-                    c2d.fillRect(0, 0, w, h);
-                }
-                return c2d;
-            };
-
-            const aspectRatio = image.width / image.height;
-            const scaledWidth = targetHeight * aspectRatio;
-            const i2 = createCanvas(scaledWidth, targetHeight);
-            i2.imageSmoothingEnabled = false;
-            i2.drawImage(image, 0, 0, scaledWidth, targetHeight);
-            return i2.canvas;
-        };
-
-        const setSuccessCallback = (src: string | HTMLCanvasElement, layer: any, img: HTMLImageElement | HTMLCanvasElement) => {
-            if (src instanceof HTMLCanvasElement) {
-                successCallback(src, layer, src);
-                return;
-            }
-            // fix the image size ... this code from origin game
-
-            // Rescale the image to the canvas height, if layer.scale is true
-            const rescaledImage = layer.scale ? rescaleImageToCanvasHeight(img, layer.model.height) : img;
-
-            successCallback(src, layer, rescaledImage);
-        }
-
-
-        if (src instanceof HTMLCanvasElement) {
-            successCallback(src, layer, src);
-            return;
-        }
-        // console.log('[ImageLoaderHook] loadImage', src);
-        if (this.imgLookupTable.has(src)) {
-            const n = this.imgLookupTable.get(src);
-            if (n) {
-                try {
-                    // this may throw error
-                    const imgString = await n.imgData.getter.getBase64Image();
-
-                    const image = new Image();
-                    image.onload = () => {
-                        setSuccessCallback(src, layer, image);
-                    };
-                    image.onerror = (event) => {
-                        console.error('[ImageLoaderHook] loadImage replace error', [src]);
-                        this.logger.error(`[ImageLoaderHook] loadImage replace error: src[${src}]`);
-                        errorCallback(src, layer, event);
-                    };
-                    image.src = imgString;
-                    // console.log('[ImageLoaderHook] loadImage replace', [n.modName, src, image, n.imgData]);
-                    return;
-                } catch (e) {
-                    console.error('[ImageLoaderHook] loadImage replace error', [src, e]);
-                }
-            }
-        }
-        // console.log('[ImageLoaderHook] loadImage not in imgLookupTable', src);
-        for (const hooker of this.sideHooker) {
-            try {
-                const r = await hooker.imageLoader(src, layer, setSuccessCallback, errorCallback);
-                if (r) {
-                    return;
-                }
-            } catch (e: Error | any) {
-                console.error('[ImageLoaderHook] loadImage sideHooker error', [src, hooker, e,]);
-                this.logger.error(`[ImageLoaderHook] loadImage sideHooker error: src[${src}] hook[${hooker.hookName}] ${e?.message ? e.message : e}`);
-            }
-        }
-        // console.log('[ImageLoaderHook] loadImage not in sideHooker', src);
-        // this.originLoader!.loadImage(src, layer, successCallback, errorCallback);
-        const image = new Image();
-        image.onload = () => {
-            setSuccessCallback(src, layer, image);
-        };
-        image.onerror = (event) => {
-            console.warn('[ImageLoaderHook] loadImage originLoader error', [src]);
-            this.logger.warn(`[ImageLoaderHook] loadImage originLoader error: src[${src}]`);
-            errorCallback(src, layer, event);
-        };
-        image.src = src;
-    }
+    // protected async loadImage(
+    //     src: string | HTMLCanvasElement,
+    //     layer: any,
+    //     successCallback: (src: string | HTMLCanvasElement, layer: any, img: HTMLImageElement | HTMLCanvasElement) => void,
+    //     errorCallback: (src: string, layer: any, event: any) => void,
+    // ) {
+    //     const rescaleImageToCanvasHeight = (image: HTMLImageElement | HTMLCanvasElement, targetHeight: number) => {
+    //         // code from origin game
+    //         const createCanvas = (w: number, h: number, fill?: string | CanvasGradient | CanvasPattern | undefined) => {
+    //             let c = document.createElement("canvas");
+    //             c.width = w;
+    //             c.height = h;
+    //             let c2d = c.getContext('2d');
+    //             if (!c2d) {
+    //                 throw new Error('Cannot get 2d context');
+    //             }
+    //             if (fill) {
+    //                 c2d.fillStyle = fill;
+    //                 c2d.fillRect(0, 0, w, h);
+    //             }
+    //             return c2d;
+    //         };
+    //
+    //         const aspectRatio = image.width / image.height;
+    //         const scaledWidth = targetHeight * aspectRatio;
+    //         const i2 = createCanvas(scaledWidth, targetHeight);
+    //         i2.imageSmoothingEnabled = false;
+    //         i2.drawImage(image, 0, 0, scaledWidth, targetHeight);
+    //         return i2.canvas;
+    //     };
+    //
+    //     const setSuccessCallback = (src: string | HTMLCanvasElement, layer: any, img: HTMLImageElement | HTMLCanvasElement) => {
+    //         if (src instanceof HTMLCanvasElement) {
+    //             successCallback(src, layer, src);
+    //             return;
+    //         }
+    //         // fix the image size ... this code from origin game
+    //
+    //         // Rescale the image to the canvas height, if layer.scale is true
+    //         const rescaledImage = layer.scale ? rescaleImageToCanvasHeight(img, layer.model.height) : img;
+    //
+    //         successCallback(src, layer, rescaledImage);
+    //     }
+    //
+    //
+    //     if (src instanceof HTMLCanvasElement) {
+    //         successCallback(src, layer, src);
+    //         return;
+    //     }
+    //     // console.log('[ImageLoaderHook] loadImage', src);
+    //     if (this.imgLookupTable.has(src)) {
+    //         const n = this.imgLookupTable.get(src);
+    //         if (n) {
+    //             try {
+    //                 // this may throw error
+    //                 const imgString = await n.imgData.getter.getBase64Image();
+    //
+    //                 const image = new Image();
+    //                 image.onload = () => {
+    //                     setSuccessCallback(src, layer, image);
+    //                 };
+    //                 image.onerror = (event) => {
+    //                     console.error('[ImageLoaderHook] loadImage replace error', [src]);
+    //                     this.logger.error(`[ImageLoaderHook] loadImage replace error: src[${src}]`);
+    //                     errorCallback(src, layer, event);
+    //                 };
+    //                 image.src = imgString;
+    //                 // console.log('[ImageLoaderHook] loadImage replace', [n.modName, src, image, n.imgData]);
+    //                 return;
+    //             } catch (e) {
+    //                 console.error('[ImageLoaderHook] loadImage replace error', [src, e]);
+    //             }
+    //         }
+    //     }
+    //     // console.log('[ImageLoaderHook] loadImage not in imgLookupTable', src);
+    //     for (const hooker of this.sideHooker) {
+    //         try {
+    //             const r = await hooker.imageLoader(src, layer, setSuccessCallback, errorCallback);
+    //             if (r) {
+    //                 return;
+    //             }
+    //         } catch (e: Error | any) {
+    //             console.error('[ImageLoaderHook] loadImage sideHooker error', [src, hooker, e,]);
+    //             this.logger.error(`[ImageLoaderHook] loadImage sideHooker error: src[${src}] hook[${hooker.hookName}] ${e?.message ? e.message : e}`);
+    //         }
+    //     }
+    //     // console.log('[ImageLoaderHook] loadImage not in sideHooker', src);
+    //     // this.originLoader!.loadImage(src, layer, successCallback, errorCallback);
+    //     const image = new Image();
+    //     image.onload = () => {
+    //         setSuccessCallback(src, layer, image);
+    //     };
+    //     image.onerror = (event) => {
+    //         console.warn('[ImageLoaderHook] loadImage originLoader error', [src]);
+    //         this.logger.warn(`[ImageLoaderHook] loadImage originLoader error: src[${src}]`);
+    //         errorCallback(src, layer, event);
+    //     };
+    //     image.src = src;
+    // }
 
     init() {
         // this.initLookupTable();
@@ -225,14 +225,14 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         // game/04-Variables/canvasmodel-patterns-lib.js
         // game/04-Variables/canvasmodel-patterns-api.js
         // @ts-ignore
-        window.registerImagePattern = (name: string, src: string) => {
-            const image = new Image();
-            image.onload = function () {
-                // @ts-ignore
-                Renderer.Patterns[name] = Renderer.globalC2D.createPattern(image, "repeat");
-            };
-            image.src = src;
-        }
+        // window.registerImagePattern = (name: string, src: string) => {
+        //     const image = new Image();
+        //     image.onload = function () {
+        //         // @ts-ignore
+        //         Renderer.Patterns[name] = Renderer.globalC2D.createPattern(image, "repeat");
+        //     };
+        //     image.src = src;
+        // }
 
         // game/03-JavaScript/base.js
         // function processedSvg(width, height) ->  const fixSVGNameSpace = (type, elem, newParent = null)  ->  switch

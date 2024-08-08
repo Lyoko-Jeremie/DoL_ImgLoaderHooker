@@ -18,15 +18,15 @@
     }
 
     // game/04-Variables/canvasmodel-patterns-lib.js
-    {
-        const sc = scNew.scriptFileItems.map.get('canvasmodel-patterns-lib.js');
-        if (!sc) {
-            console.error('[ImageLoaderHook] cannot find canvasmodel-patterns-lib.js');
-            logger.error('[ImageLoaderHook] cannot find canvasmodel-patterns-lib.js');
-            return;
-        }
-        sc.content = sc.content.replaceAll(`registerImagePattern`, 'window.registerImagePattern');
-    }
+    // {
+    //     const sc = scNew.scriptFileItems.map.get('canvasmodel-patterns-lib.js');
+    //     if (!sc) {
+    //         console.error('[ImageLoaderHook] cannot find canvasmodel-patterns-lib.js');
+    //         logger.error('[ImageLoaderHook] cannot find canvasmodel-patterns-lib.js');
+    //         return;
+    //     }
+    //     sc.content = sc.content.replaceAll(`registerImagePattern`, 'window.registerImagePattern');
+    // }
 
     // game/03-JavaScript/base.js
     {

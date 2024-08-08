@@ -193,7 +193,7 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         }
     }
 
-    protected originLoader?: (typeof Renderer)['ImageLoader'];
+    // protected originLoader?: (typeof Renderer)['ImageLoader'];
 
     async debugGetImg(src: string): Promise<HTMLImageElement | undefined> {
         if (this.imgLookupTable.has(src)) {
@@ -234,5 +234,11 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         return undefined;
     }
 
+    OriginalImageConstructor?: ImageConstructor;
 
+}
+
+type ImageConstructor = {
+    new(width?: number, height?: number): HTMLImageElement;
+    prototype: HTMLImageElement;
 }
