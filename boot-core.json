@@ -1,0 +1,31 @@
+{
+  "name": "ModLoader ImageLoaderHookCore",
+  "version": "2.11.1",
+  "styleFileList": [
+  ],
+  "scriptFileList_earlyload": [
+  ],
+  "scriptFileList_inject_early": [
+    "dist/ImageLoaderHookCore.mod.js"
+  ],
+  "scriptFileList_preload": [
+    "dist/preload/preload.js"
+  ],
+  "scriptFileList": [
+  ],
+  "tweeFileList": [
+  ],
+  "imgFileList": [
+  ],
+  "imgFileReplaceList": [
+  ],
+  "additionFile": [
+    "README.md"
+  ],
+  "dependenceInfo": [
+    {
+      "modName": "ModLoader",
+      "version": "^2.16.3"
+    }
+  ]
+}

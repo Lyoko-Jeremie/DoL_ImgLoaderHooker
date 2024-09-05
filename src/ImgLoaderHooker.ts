@@ -21,61 +21,12 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
             gSC2DataManager,
             gModUtils,
         );
-    }
-
-    protected dynamicImageTagReplaceTable: Set<string> = new Set<string>([
-        'Adult Shop Menu',
-        'PillCollection',
-        'Sextoys Inventory',
-        'FeatsUI'
-    ]);
-
-    public addDynamicImageTagReplacePassage(passageName: string) {
-        this.dynamicImageTagReplaceTable.add(passageName);
-    }
-
-    async whenSC2PassageEnd(passage: Passage, content: HTMLDivElement) {
-        // console.log('[ImageLoaderHook] whenSC2PassageEnd()', [passage, content]);
-        if (this.dynamicImageTagReplaceTable.has(passage.title)) {
-            // :: this passage need to run dynamic replace task
-
-            // console.log('[ImageLoaderHook] whenSC2PassageEnd() [Adult Shop Menu]/[PillCollection]', [passage, content]);
-            // same as DoL `window.sexShopGridInit`
-            // same as DoL `window.addElementToGrid`
-            jQuery(async () => {
-                await sleep(1);
-                const imgList = Array.from(content.querySelectorAll('img'));
-                // console.log("[ImageLoaderHook] this.dynamicImageTagReplaceTable.has(passage.title)", [passage.title, imgList]);
-                if (imgList.length === 0) {
-                    console.error(`[ImageLoaderHook] whenSC2PassageEnd() [${passage.title}] imgList.length === 0`);
-                    this.logger.error(`[ImageLoaderHook] whenSC2PassageEnd() [${passage.title}] imgList.length === 0`);
-                    return;
-                }
-                await Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
-            });
-        } else {
-            // :: do the check process to carefully and notice this passage have some img maybe need replace
-            jQuery(async () => {
-                await sleep(1);
-                const imgList = Array.from(content.querySelectorAll('img'));
-                const imgNotHookedList = imgList.filter(img =>
-                    !(
-                        img.hasAttribute('ml-src') ||
-                        img.hasAttribute('ML-src') ||
-                        img.src.startsWith('data:')
-                    )
-                );
-                if (imgNotHookedList.length !== 0) {
-                    console.warn(`[ImageLoaderHook] whenSC2PassageEnd() find some img tag on [${passage.title}] but not hooked`, [
-                        passage, imgNotHookedList, imgList,
-                        imgNotHookedList.map(img => img.src)
-                    ]);
-                    this.logger.warn(`[ImageLoaderHook] whenSC2PassageEnd() find [${imgNotHookedList.length}] img tag on [${passage.title}] but not hooked`);
-                    return;
-                }
-                return;
-            });
-        }
+        this.addListDynamicImageTagReplacePassage([
+            'Adult Shop Menu',
+            'PillCollection',
+            'Sextoys Inventory',
+            'FeatsUI'
+        ]);
     }
 
     protected hooked = false;

@@ -68,7 +68,7 @@
                         super.src = value;
                     }
                 }).catch((e) => {
-                    console.error('[GameOriginalImagePack] window.Image catch error', [value, e]);
+                    console.error('[ImageLoaderHook] window.Image catch error', [value, e]);
                     if (typeof thisPtr.onerror === 'function') {
                         thisPtr.onerror(new Event('error'));
                     }

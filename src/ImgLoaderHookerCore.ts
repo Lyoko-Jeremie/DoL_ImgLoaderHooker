@@ -6,6 +6,8 @@ import type {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
 import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
 import {isFunction, isString} from 'lodash';
 import {CssReplacer} from "./CssReplacer";
+import {sleep} from "./utils";
+import { Passage } from "../../../src/BeforeSC2/SugarCube2";
 
 /**
  * @return Promise<boolean>      Promise<true> if handle by this hooker, otherwise Promise<false>.
@@ -37,6 +39,11 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
             'ImageLoaderAddon',
             this,
         );
+        this.gModUtils.getAddonPluginManager().registerAddonPlugin(
+            'ImageLoaderHook',
+            'ImageLoaderAddon',
+            this,
+        );
         this.gSC2DataManager.getHtmlTagSrcHook().addHook('ImgLoaderHooker',
             async (el: HTMLImageElement | HTMLElement, mlSrc: string, field: string) => {
                 // console.log('[ImageLoaderHook] getHtmlTagSrcHook addHook', [mlSrc, field, el]);
@@ -61,6 +68,62 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
             },
         );
         this.cssReplacer = new CssReplacer(thisWindow, gSC2DataManager, gModUtils);
+    }
+
+    protected dynamicImageTagReplaceTable: Set<string> = new Set<string>();
+
+    public addDynamicImageTagReplacePassage(passageName: string) {
+        this.dynamicImageTagReplaceTable.add(passageName);
+    }
+
+    public addListDynamicImageTagReplacePassage(passageNameList: string[]) {
+        for (const passageName of passageNameList) {
+            this.dynamicImageTagReplaceTable.add(passageName);
+        }
+    }
+
+    async whenSC2PassageEnd(passage: Passage, content: HTMLDivElement) {
+        // console.log('[ImageLoaderHook] whenSC2PassageEnd()', [passage, content]);
+        if (this.dynamicImageTagReplaceTable.has(passage.title)) {
+            // :: this passage need to run dynamic replace task
+
+            // console.log('[ImageLoaderHook] whenSC2PassageEnd() [Adult Shop Menu]/[PillCollection]', [passage, content]);
+            // same as DoL `window.sexShopGridInit`
+            // same as DoL `window.addElementToGrid`
+            jQuery(async () => {
+                await sleep(1);
+                const imgList = Array.from(content.querySelectorAll('img'));
+                // console.log("[ImageLoaderHook] this.dynamicImageTagReplaceTable.has(passage.title)", [passage.title, imgList]);
+                if (imgList.length === 0) {
+                    console.error(`[ImageLoaderHook] whenSC2PassageEnd() [${passage.title}] imgList.length === 0`);
+                    this.logger.error(`[ImageLoaderHook] whenSC2PassageEnd() [${passage.title}] imgList.length === 0`);
+                    return;
+                }
+                await Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
+            });
+        } else {
+            // :: do the check process to carefully and notice this passage have some img maybe need replace
+            jQuery(async () => {
+                await sleep(1);
+                const imgList = Array.from(content.querySelectorAll('img'));
+                const imgNotHookedList = imgList.filter(img =>
+                    !(
+                        img.hasAttribute('ml-src') ||
+                        img.hasAttribute('ML-src') ||
+                        img.src.startsWith('data:')
+                    )
+                );
+                if (imgNotHookedList.length !== 0) {
+                    console.warn(`[ImageLoaderHook] whenSC2PassageEnd() find some img tag on [${passage.title}] but not hooked`, [
+                        passage, imgNotHookedList, imgList,
+                        imgNotHookedList.map(img => img.src)
+                    ]);
+                    this.logger.warn(`[ImageLoaderHook] whenSC2PassageEnd() find [${imgNotHookedList.length}] img tag on [${passage.title}] but not hooked`);
+                    return;
+                }
+                return;
+            });
+        }
     }
 
     cssReplacer: CssReplacer;
