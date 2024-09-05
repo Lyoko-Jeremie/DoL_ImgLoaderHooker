@@ -4,10 +4,10 @@ import type {ModImg, ModInfo} from "../../../dist-BeforeSC2/ModLoader";
 import type {ModZipReader} from "../../../dist-BeforeSC2/ModZipReader";
 import type {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
 import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
+import type {Passage} from "../../../src/BeforeSC2/SugarCube2";
 import {isFunction, isString} from 'lodash';
 import {CssReplacer} from "./CssReplacer";
 import {sleep} from "./utils";
-import { Passage } from "../../../src/BeforeSC2/SugarCube2";
 
 /**
  * @return Promise<boolean>      Promise<true> if handle by this hooker, otherwise Promise<false>.
