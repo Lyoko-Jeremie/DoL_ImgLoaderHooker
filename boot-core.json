@@ -1,6 +1,6 @@
 {
   "name": "ModLoader ImageLoaderHookCore",
-  "version": "2.12.0",
+  "version": "2.12.1",
   "styleFileList": [
   ],
   "scriptFileList_earlyload": [
@@ -9,7 +9,6 @@
     "dist/ImageLoaderHookCore.mod.js"
   ],
   "scriptFileList_preload": [
-    "dist/preload/preload.js"
   ],
   "scriptFileList": [
   ],
