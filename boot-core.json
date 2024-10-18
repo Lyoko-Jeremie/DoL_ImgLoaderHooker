@@ -1,6 +1,6 @@
 {
   "name": "ModLoader ImageLoaderHookCore",
-  "version": "2.12.1",
+  "version": "2.12.2",
   "styleFileList": [
   ],
   "scriptFileList_earlyload": [
