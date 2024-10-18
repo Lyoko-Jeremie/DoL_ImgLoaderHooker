@@ -6,7 +6,8 @@
   "scriptFileList_earlyload": [
   ],
   "scriptFileList_inject_early": [
-    "dist/ImageLoaderHookCore.mod.js"
+    "dist/ImageLoaderHookCore.mod.js",
+    "dist/inject_early/inject_early.js"
   ],
   "scriptFileList_preload": [
   ],
