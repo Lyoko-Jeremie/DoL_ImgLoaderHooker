@@ -263,7 +263,11 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
             const n = this.imgLookupTable.get(src);
             if (n) {
                 const image = new Image();
-                image.src = await n.imgData.getter.getBase64Image();
+                const r = await n.imgData.getter.getBase64Image();
+                if (!r) {
+                    return undefined;
+                }
+                image.src = r;
                 return image;
             }
         }
@@ -275,7 +279,10 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
             const n = this.imgLookupTable.get(src);
             if (n) {
                 try {
-                    return await n.imgData.getter.getBase64Image();
+                    const c = await n.imgData.getter.getBase64Image();
+                    if (c) {
+                        return c;
+                    }
                 } catch (e) {
                     console.error('[ImageLoaderHook] getImage replace error', [src, e]);
                 }
