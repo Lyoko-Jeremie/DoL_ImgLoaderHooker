@@ -25,7 +25,8 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
             'Adult Shop Menu',
             'PillCollection',
             'Sextoys Inventory',
-            'FeatsUI'
+            'FeatsUI',
+            'PillCollection',
         ]);
     }
 
