@@ -1,7 +1,6 @@
 {
   "name": "ModLoader DoL ImageLoaderHook",
   "version": "2.16.1",
-  "nikeName": "DoL Image Loader Hook",
   "alias": [
     "ImageLoaderHook",
     "ImageLoaderHookCore"
@@ -32,7 +31,7 @@
   "dependenceInfo": [
     {
       "modName": "ModLoader",
-      "version": "^2.16.3"
+      "version": "^2.26.0"
     }
   ]
 }
