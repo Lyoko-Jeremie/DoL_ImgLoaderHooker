@@ -5,7 +5,7 @@ import type {ModZipReader} from "../../../dist-BeforeSC2/ModZipReader";
 import type {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
 import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
 import type {Passage} from "../../../src/BeforeSC2/SugarCube2";
-import {isFunction, isString} from 'lodash';
+import {isFunction, isString, reverse} from 'lodash';
 import {CssReplacer} from "./CssReplacer";
 import {sleep} from "./utils";
 
@@ -35,14 +35,27 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
     ) {
         this.logger = this.gModUtils.getLogger();
         this.gModUtils.getAddonPluginManager().registerAddonPlugin(
-            'ModLoader DoL ImageLoaderHook',
+            'ImageLoaderHook',
             'ImageLoaderAddon',
             this,
         );
         this.gModUtils.getAddonPluginManager().registerAddonPlugin(
-            'ImageLoaderHook',
+            'ImageLoaderHookCore',
             'ImageLoaderAddon',
             this,
+        );
+        this.gModUtils.getAddonPluginManager().registerAddonPlugin(
+            'ModLoader DoL ImageLoaderHook',
+            'ImageLoaderAddon',
+            this,
+        );
+        this.gSC2DataManager.getModLoadController().addLifeTimeCircleHook(
+            'ImageLoaderHook',
+            {
+                ModLoaderLoadEnd: async () => {
+                    await this.onModLoaderLoadEnd();
+                },
+            }
         );
         this.gSC2DataManager.getHtmlTagSrcHook().addHook('ImgLoaderHooker',
             async (el: HTMLImageElement | HTMLElement, mlSrc: string, field: string) => {
@@ -68,6 +81,14 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
             },
         );
         this.cssReplacer = new CssReplacer(thisWindow, gSC2DataManager, gModUtils);
+    }
+
+    async onModLoaderLoadEnd() {
+        for (const k of this.imgLookupTable.keys()) {
+            let l = this.imgLookupTable.get(k)!;
+            l = reverse(l);
+            this.imgLookupTable.set(k, l);
+        }
     }
 
     protected dynamicImageTagReplaceTable: Set<string> = new Set<string>();
@@ -175,13 +196,18 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         for (const img of mod.imgs) {
             const n = this.imgLookupTable.get(img.path);
             if (n) {
-                console.warn(`[ImageLoaderHook] registerMod duplicate img path:`, [mod.name, img.path, n.modName]);
-                this.logger.warn(`[ImageLoaderHook] registerMod duplicate img path: mod[${mod.name}] img[${img.path}] old[${n.modName}]`);
+                // console.warn(`[ImageLoaderHook] registerMod duplicate img path:`, [mod.name, img.path, n.modName]);
+                // this.logger.warn(`[ImageLoaderHook] registerMod duplicate img path: mod[${mod.name}] img[${img.path}] old[${n.modName}]`);
+                n.push({
+                    modName: mod.name,
+                    imgData: img,
+                });
+                return;
             }
-            this.imgLookupTable.set(img.path, {
+            this.imgLookupTable.set(img.path, [{
                 modName: mod.name,
                 imgData: img,
-            });
+            }]);
         }
     }
 
@@ -203,7 +229,7 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         this.logger.error(`[ImageLoaderHook] addSideHooker() failed. invalid hook. hookName[${hooker.hookName}]`);
     }
 
-    protected imgLookupTable: Map<string, { modName: string, imgData: ModImg }> = new Map();
+    protected imgLookupTable: Map<string, { modName: string, imgData: ModImg }[]> = new Map();
 
     protected initLookupTable() {
         const modListName = this.gModUtils.getModListName();
@@ -214,13 +240,17 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
             }
             for (const img of mod.imgs) {
                 if (this.imgLookupTable.has(img.path)) {
-                    console.warn(`[ImageLoaderHook] duplicate img path:`, [modName, img.path]);
-                    this.logger.warn(`[ImageLoaderHook] duplicate img path: mod[${modName}] img[${img.path}]`);
+                    // console.warn(`[ImageLoaderHook] duplicate img path:`, [modName, img.path]);
+                    // this.logger.warn(`[ImageLoaderHook] duplicate img path: mod[${modName}] img[${img.path}]`);
+                    this.imgLookupTable.get(img.path)!.push({
+                        modName,
+                        imgData: img,
+                    });
                 }
-                this.imgLookupTable.set(img.path, {
+                this.imgLookupTable.set(img.path, [{
                     modName,
                     imgData: img,
-                });
+                }]);
             }
         }
     }
@@ -228,13 +258,17 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
     public addImages(modImg: ModImg[], modName: string) {
         for (const img of modImg) {
             if (this.imgLookupTable.has(img.path)) {
-                console.warn(`[ImageLoaderHook] addImages duplicate img path:`, [modName, img.path]);
-                this.logger.warn(`[ImageLoaderHook] addImages duplicate img path: mod[${modName}] img[${img.path}]`);
+                // console.warn(`[ImageLoaderHook] addImages duplicate img path:`, [modName, img.path]);
+                // this.logger.warn(`[ImageLoaderHook] addImages duplicate img path: mod[${modName}] img[${img.path}]`);
+                this.imgLookupTable.get(img.path)!.push({
+                    modName,
+                    imgData: img,
+                });
             }
-            this.imgLookupTable.set(img.path, {
+            this.imgLookupTable.set(img.path, [{
                 modName,
                 imgData: img,
-            });
+            }]);
         }
     }
 
@@ -246,13 +280,17 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         }
         for (const img of mod.imgs) {
             if (this.imgLookupTable.has(img.path)) {
-                console.warn(`[ImageLoaderHook] forceLoadModImage duplicate img path:`, [mod.name, img.path]);
-                this.logger.warn(`[ImageLoaderHook] forceLoadModImage duplicate img path: mod[${mod.name}] img[${img.path}]`);
+                // console.warn(`[ImageLoaderHook] forceLoadModImage duplicate img path:`, [mod.name, img.path]);
+                // this.logger.warn(`[ImageLoaderHook] forceLoadModImage duplicate img path: mod[${mod.name}] img[${img.path}]`);
+                this.imgLookupTable.get(img.path)!.push({
+                    modName: mod.name,
+                    imgData: img,
+                });
             }
-            this.imgLookupTable.set(img.path, {
+            this.imgLookupTable.set(img.path, [{
                 modName: mod.name,
                 imgData: img,
-            });
+            }]);
         }
     }
 
@@ -261,9 +299,9 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
     async debugGetImg(src: string): Promise<HTMLImageElement | undefined> {
         if (this.imgLookupTable.has(src)) {
             const n = this.imgLookupTable.get(src);
-            if (n) {
+            if (n && n.length > 0) {
                 const image = new Image();
-                const r = await n.imgData.getter.getBase64Image();
+                const r = await n[0]?.imgData.getter.getBase64Image();
                 if (!r) {
                     return undefined;
                 }
@@ -277,9 +315,9 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
     protected async getImage(src: string) {
         if (this.imgLookupTable.has(src)) {
             const n = this.imgLookupTable.get(src);
-            if (n) {
+            if (n && n.length > 0) {
                 try {
-                    const c = await n.imgData.getter.getBase64Image();
+                    const c = await n[0]?.imgData.getter.getBase64Image();
                     if (c) {
                         return c;
                     }
