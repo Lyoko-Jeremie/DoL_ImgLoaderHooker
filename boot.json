@@ -1,6 +1,11 @@
 {
   "name": "ModLoader DoL ImageLoaderHook",
   "version": "2.16.1",
+  "nikeName": "DoL Image Loader Hook",
+  "alias": [
+    "ImageLoaderHook",
+    "ImageLoaderHookCore"
+  ],
   "styleFileList": [
   ],
   "scriptFileList_earlyload": [
