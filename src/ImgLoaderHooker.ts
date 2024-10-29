@@ -34,8 +34,8 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
 
     protected setupHook() {
         if (this.hooked) {
-            console.error('[ImageLoaderHook] setupHook() (this.hooked)');
-            this.logger.error(`[ImageLoaderHook] setupHook() (this.hooked)`);
+            // console.error('[ImageLoaderHook] setupHook() (this.hooked)');
+            // this.logger.error(`[ImageLoaderHook] setupHook() (this.hooked)`);
             return;
         }
         this.hooked = true;
