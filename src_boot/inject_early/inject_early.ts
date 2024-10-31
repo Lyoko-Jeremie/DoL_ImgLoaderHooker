@@ -27,11 +27,11 @@
                 return super.src || '';
             }
 
-            set src(value: string) {
+            set src(value: string | undefined | null) {
                 const thisPtr = this;
-                if (value.startsWith('data:')) {
+                if (!value || value.startsWith('data:')) {
                     // skip replace
-                    thisPtr.setAttribute('src', value);
+                    thisPtr.setAttribute('src', value as any);
                     return;
                 }
                 this._originalImageObject = new OriginalImage();
