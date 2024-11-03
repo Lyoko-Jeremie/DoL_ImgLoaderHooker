@@ -81,6 +81,22 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
             },
         );
         this.cssReplacer = new CssReplacer(thisWindow, gSC2DataManager, gModUtils);
+
+        const theName = this.gModUtils.getNowRunningModName();
+        if (!theName) {
+            console.error('[ImageLoaderHook] init() (!theName).', [theName]);
+            this.logger.error(`[ImageLoaderHook] init() [${theName}].`);
+            return;
+        }
+        const mod = this.gModUtils.getMod(theName);
+        if (!mod) {
+            console.error('[ImageLoaderHook] init() (!mod). ', [theName]);
+            this.logger.error(`[ImageLoaderHook] init() (!mod). [${theName}].`);
+            return;
+        }
+        console.log('[ImageLoaderHook] register modRef done.', [theName]);
+        this.logger.log(`[ImageLoaderHook] register modRef done. [${theName}].`);
+        mod.modRef = this;
     }
 
     async onModLoaderLoadEnd() {
@@ -233,6 +249,23 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
     }
 
     protected imgLookupTable: Map<string, { modName: string, imgData: ModImg }[]> = new Map();
+
+    removeModFromImgLookupTable(modNameList: string[]) {
+        const modNameListSet = new Set(modNameList);
+        const keys = new Set(this.imgLookupTable.keys());
+        for (const key of keys) {
+            const n = this.imgLookupTable.get(key);
+            if (!n) {
+                continue;
+            }
+            const newN = n.filter(v => !modNameListSet.has(v.modName));
+            if (newN.length === 0) {
+                this.imgLookupTable.delete(key);
+            } else {
+                this.imgLookupTable.set(key, newN);
+            }
+        }
+    }
 
     // protected initLookupTable() {
     //     const modListName = this.gModUtils.getModListName();
