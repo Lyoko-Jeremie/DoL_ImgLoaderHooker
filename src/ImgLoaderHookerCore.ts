@@ -84,11 +84,14 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
     }
 
     async onModLoaderLoadEnd() {
-        for (const k of this.imgLookupTable.keys()) {
-            let l = this.imgLookupTable.get(k)!;
-            l = reverse(l);
-            this.imgLookupTable.set(k, l);
+        for (const v of this.imgLookupTable.values()) {
+            reverse(v);
         }
+        // for (const k of this.imgLookupTable.keys()) {
+        //     let l = this.imgLookupTable.get(k)!;
+        //     l = reverse(l);
+        //     this.imgLookupTable.set(k, l);
+        // }
     }
 
     protected dynamicImageTagReplaceTable: Set<string> = new Set<string>();
@@ -231,29 +234,29 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
 
     protected imgLookupTable: Map<string, { modName: string, imgData: ModImg }[]> = new Map();
 
-    protected initLookupTable() {
-        const modListName = this.gModUtils.getModListName();
-        for (const modName of modListName) {
-            const mod: ModInfo | undefined = this.gModUtils.getMod(modName);
-            if (!mod) {
-                continue;
-            }
-            for (const img of mod.imgs) {
-                if (this.imgLookupTable.has(img.path)) {
-                    // console.warn(`[ImageLoaderHook] duplicate img path:`, [modName, img.path]);
-                    // this.logger.warn(`[ImageLoaderHook] duplicate img path: mod[${modName}] img[${img.path}]`);
-                    this.imgLookupTable.get(img.path)!.push({
-                        modName,
-                        imgData: img,
-                    });
-                }
-                this.imgLookupTable.set(img.path, [{
-                    modName,
-                    imgData: img,
-                }]);
-            }
-        }
-    }
+    // protected initLookupTable() {
+    //     const modListName = this.gModUtils.getModListName();
+    //     for (const modName of modListName) {
+    //         const mod: ModInfo | undefined = this.gModUtils.getMod(modName);
+    //         if (!mod) {
+    //             continue;
+    //         }
+    //         for (const img of mod.imgs) {
+    //             if (this.imgLookupTable.has(img.path)) {
+    //                 // console.warn(`[ImageLoaderHook] duplicate img path:`, [modName, img.path]);
+    //                 // this.logger.warn(`[ImageLoaderHook] duplicate img path: mod[${modName}] img[${img.path}]`);
+    //                 this.imgLookupTable.get(img.path)!.push({
+    //                     modName,
+    //                     imgData: img,
+    //                 });
+    //             }
+    //             this.imgLookupTable.set(img.path, [{
+    //                 modName,
+    //                 imgData: img,
+    //             }]);
+    //         }
+    //     }
+    // }
 
     public addImages(modImg: ModImg[], modName: string) {
         for (const img of modImg) {
