@@ -1,6 +1,6 @@
 {
   "name": "ModLoader ImageLoaderHookCore",
-  "version": "2.16.2",
+  "version": "2.18.0",
   "nikeName": "Image Loader Hook",
   "alias": [
     "ImageLoaderHook",
