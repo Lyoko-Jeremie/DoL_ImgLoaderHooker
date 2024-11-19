@@ -1,0 +1,10 @@
+//
+window.modImgLoaderHooker.addListDynamicImageTagReplacePassage([
+  "passageName1",
+  "passageName2",
+  "passageName3",
+  "passageName4",
+  "passageName5",
+  "passageName6",
+  "passageName7",
+]);
