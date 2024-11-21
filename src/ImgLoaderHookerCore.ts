@@ -122,6 +122,16 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         }
     }
 
+    public async replaceAllImageInHtmlElement(content: HTMLElement) {
+        const imgList = Array.from(content.querySelectorAll('img'));
+        // console.log("[ImageLoaderHook] this.dynamicImageTagReplaceTable.has(passage.title)", [passage.title, imgList]);
+        if (imgList.length === 0) {
+            console.error(`[ImageLoaderHook] replaceAllImageInHtmlElement() imgList.length === 0`);
+            return;
+        }
+        await Promise.all(imgList.map(async (img) => this.replaceImageInImgTags(img)));
+    }
+
     async whenSC2PassageEnd(passage: Passage, content: HTMLDivElement) {
         // console.log('[ImageLoaderHook] whenSC2PassageEnd()', [passage, content]);
         if (this.dynamicImageTagReplaceTable.has(passage.title)) {
