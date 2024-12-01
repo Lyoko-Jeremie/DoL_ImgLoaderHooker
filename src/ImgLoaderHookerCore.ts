@@ -186,7 +186,7 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         await this.replaceStyleSheets();
     }
 
-    protected async replaceImageInImgTags(img: HTMLImageElement) {
+    protected async replaceImageInImgTags(img: HTMLImageElement, noLog?: boolean) {
         if (img.hasAttribute('ml-src') || img.hasAttribute('ML-src')) {
             // this is processed or processing
             return;
@@ -204,7 +204,7 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         // ===============
         img.setAttribute('ml-src', src);
         img.removeAttribute('src');
-        console.log(this);
+        // console.log(this);
         const m = await this.getImage(src);
         // console.log('[ImageLoaderHook] replaceImageInImgTags() get img', [src, m]);
         if (m) {
@@ -212,7 +212,7 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         } else {
             img.setAttribute('src', src);
             console.warn('[ImageLoaderHook] replaceImageInImgTags() cannot find img', [img, src]);
-            this.logger.warn(`[ImageLoaderHook] replaceImageInImgTags() cannot find img. [${src}]`);
+            !noLog && this.logger.warn(`[ImageLoaderHook] replaceImageInImgTags() cannot find img. [${src}]`);
         }
     }
 
