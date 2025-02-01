@@ -262,7 +262,7 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
 \t\tif (!V.options.images) return;
 \t\tconst name = typeof this.args[0] === "string" ? this.args[0] : "error";
 \t\tconst iconImg = document.createElement("img");
-\t\ticonImg.className = "icon" + (this.args.includes("infront") ? " infront" : "");
+\t\ticonImg.className = "icon" + (this.args.includes("infront") ? " infront" : "") + (this.args.includes("flip") ? " flip" : "");
 \t\ticonImg.src = "img/misc/icon/" + name;
 \t\tthis.output.append(iconImg);
 \t\t// append a whitespace for compatibility with old icon behavior
