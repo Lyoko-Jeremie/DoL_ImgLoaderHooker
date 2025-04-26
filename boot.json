@@ -1,6 +1,6 @@
 {
   "name": "ModLoader DoL ImageLoaderHook",
-  "version": "2.20.0",
+  "version": "2.20.1",
   "alias": [
     "ImageLoaderHook",
     "ImageLoaderHookCore"
@@ -31,7 +31,7 @@
   "dependenceInfo": [
     {
       "modName": "ModLoader",
-      "version": "^2.26.0"
+      "version": "^2.30.1"
     }
   ]
 }
