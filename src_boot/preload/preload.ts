@@ -8,7 +8,7 @@
 
     const scNew = scOld.cloneSC2DataInfo();
     {
-        const sc = scNew.scriptFileItems.map.get('renderer.js');
+        const sc = scNew.scriptFileItems.getByNameWithNoPath('renderer.js');
         if (!sc) {
             console.error('[ImageLoaderHook] cannot find renderer.js');
             logger.error('[ImageLoaderHook] cannot find renderer.js');
@@ -19,7 +19,7 @@
 
     // game/04-Variables/canvasmodel-patterns-lib.js
     // {
-    //     const sc = scNew.scriptFileItems.map.get('canvasmodel-patterns-lib.js');
+    //     const sc = scNew.scriptFileItems.getByNameWithNoPath('canvasmodel-patterns-lib.js');
     //     if (!sc) {
     //         console.error('[ImageLoaderHook] cannot find canvasmodel-patterns-lib.js');
     //         logger.error('[ImageLoaderHook] cannot find canvasmodel-patterns-lib.js');
@@ -30,7 +30,7 @@
 
     // game/03-JavaScript/base.js
     {
-        const sc = scNew.scriptFileItems.map.get('base.js');
+        const sc = scNew.scriptFileItems.getByNameWithNoPath('base.js');
         if (!sc) {
             console.error('[ImageLoaderHook] cannot find base.js');
             logger.error('[ImageLoaderHook] cannot find base.js');

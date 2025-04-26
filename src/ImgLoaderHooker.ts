@@ -255,7 +255,7 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         if (!h && !isFunction(h)) {
             console.error('modifyMacroIcon() cannot find macro [icon] handle', [icon, h]);
             this.logger.error(`modifyMacroIcon() cannot find macro [icon] handle`);
-            return;
+            return;ma
         }
         const hCode = h.toString();
         const code = `handler() {
