@@ -260,10 +260,18 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         const hCode = h.toString();
         const code = `handler() {
 \t\tif (!V.options.images) return;
+\t\tconst basePath = this.name === "iconUi" ? "img/ui/" : "img/misc/icon/";
 \t\tconst name = typeof this.args[0] === "string" ? this.args[0] : "error";
 \t\tconst iconImg = document.createElement("img");
-\t\ticonImg.className = "icon" + (this.args.includes("infront") ? " infront" : "") + (this.args.includes("flip") ? " flip" : "");
-\t\ticonImg.src = "img/misc/icon/" + name;
+\t\ticonImg.className = [
+\t\t\t"icon",
+\t\t\tthis.name === "iconUi" && "icon-container",
+\t\t\tthis.args.includes("infront") && "infront",
+\t\t\tthis.args.includes("flip") && "flip",
+\t\t]
+\t\t\t.filter(Boolean)
+\t\t\t.join(" ");
+\t\ticonImg.src = basePath + name;
 \t\tthis.output.append(iconImg);
 \t\t// append a whitespace for compatibility with old icon behavior
 \t\tif (!this.args.includes("nowhitespace")) this.output.append(" ");
@@ -291,10 +299,18 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         Macro.add("icon", {
             handler() {
                 if (!V.options.images) return;
+                const basePath = this.name === "iconUi" ? "img/ui/" : "img/misc/icon/";
                 const name = typeof this.args[0] === "string" ? this.args[0] : "error";
                 const iconImg = document.createElement("img");
-                iconImg.className = "icon" + (this.args.includes("infront") ? " infront" : "");
-                iconImg.src = "img/misc/icon/" + name;
+                iconImg.className = [
+                    "icon",
+                    this.name === "iconUi" && "icon-container",
+                    this.args.includes("infront") && "infront",
+                    this.args.includes("flip") && "flip",
+                ]
+                    .filter(Boolean)
+                    .join(" ");
+                iconImg.src = basePath + name;
 
                 if (typeof window.modSC2DataManager !== 'undefined' &&
                     typeof window.modSC2DataManager.getHtmlTagSrcHook?.()?.doHook !== 'undefined') {
@@ -331,19 +347,20 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
             return;
         }
         const hCode = h.toString();
-        const code = `handler() {
-\t\tconst iconDiv = $("<div />", { id: "weatherIcon" });
-\t\tconst iconImg = $("<img />");
-
-\t\tconst dayState = Weather.bloodMoon ? "blood" : Weather.dayState === "night" ? "night" : "day";
-\t\tconst weatherState = resolveValue(Weather.type.iconType, "clear");
-\t\tconst path = \`img/misc/icon/weather/$\{dayState}_$\{weatherState}.png\`;
-
-\t\ticonImg.attr("src", path);
-\t\tWeather.Tooltips.skybox(iconImg);
-\t\ticonDiv.append(iconImg);
-\t\ticonDiv.appendTo(this.output);
-\t}`;
+        //         const code = `handler() {
+        // \t\tconst iconDiv = $("<div />", { id: "weatherIcon" });
+        // \t\tconst iconImg = $("<img />");
+        //
+        // \t\tconst dayState = Weather.bloodMoon ? "blood" : Weather.dayState === "night" ? "night" : "day";
+        // \t\tconst weatherState = resolveValue(Weather.type.iconType, "clear");
+        // \t\tconst path = \`img/ui/weather/${dayState}_${weatherState}.png\`;
+        //
+        // \t\ticonImg.attr("src", path);
+        // \t\tWeather.Tooltips.skybox(iconImg);
+        // \t\ticonDiv.append(iconImg);
+        // \t\ticonDiv.appendTo(this.output);
+        // \t}`;
+        const code = atob("aGFuZGxlcigpIHsKCQljb25zdCBpY29uRGl2ID0gJCgiPGRpdiAvPiIsIHsgaWQ6ICJ3ZWF0aGVySWNvbiIgfSk7CgkJY29uc3QgaWNvbkltZyA9ICQoIjxpbWcgLz4iKTsKCgkJY29uc3QgZGF5U3RhdGUgPSBXZWF0aGVyLmJsb29kTW9vbiA/ICJibG9vZCIgOiBXZWF0aGVyLmRheVN0YXRlID09PSAibmlnaHQiID8gIm5pZ2h0IiA6ICJkYXkiOwoJCWNvbnN0IHdlYXRoZXJTdGF0ZSA9IHJlc29sdmVWYWx1ZShXZWF0aGVyLnR5cGUuaWNvblR5cGUsICJjbGVhciIpOwoJCWNvbnN0IHBhdGggPSBgaW1nL3VpL3dlYXRoZXIvJHtkYXlTdGF0ZX1fJHt3ZWF0aGVyU3RhdGV9LnBuZ2A7CgoJCWljb25JbWcuYXR0cigic3JjIiwgcGF0aCk7CgkJV2VhdGhlci5Ub29sdGlwcy5za3lib3goaWNvbkltZyk7CgkJaWNvbkRpdi5hcHBlbmQoaWNvbkltZyk7CgkJaWNvbkRpdi5hcHBlbmRUbyh0aGlzLm91dHB1dCk7Cgl9");
         if (code !== hCode) {
             console.warn('modifyMacroWeatherIcon() macro [weatherIcon] handle changed', [weatherIcon, h, hCode, code]);
             this.logger.warn(`modifyMacroWeatherIcon() macro [weatherIcon] handle changed.`);
@@ -352,11 +369,11 @@ export class ImgLoaderHooker extends ImgLoaderHookerCore {
         Macro.add("weatherIcon", {
             handler() {
                 const iconDiv = $("<div />", {id: "weatherIcon"});
-                const iconImg/*: JQuery<HTMLImageElement>*/ = $("<img />");
+                const iconImg = $("<img />");
 
                 const dayState = Weather.bloodMoon ? "blood" : Weather.dayState === "night" ? "night" : "day";
-                const weatherState = resolveValue(window.Weather.type.iconType, "clear");
-                const path = `img/misc/icon/weather/${dayState}_${weatherState}.png`;
+                const weatherState = resolveValue(Weather.type.iconType, "clear");
+                const path = `img/ui/weather/${dayState}_${weatherState}.png`;
 
                 iconImg.attr("src", path);
                 Weather.Tooltips.skybox(iconImg);
