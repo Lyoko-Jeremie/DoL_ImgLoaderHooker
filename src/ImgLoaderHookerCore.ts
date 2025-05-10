@@ -4,6 +4,7 @@ import type {ModImg, ModInfo} from "../../../dist-BeforeSC2/ModLoader";
 import type {ModZipReader} from "../../../dist-BeforeSC2/ModZipReader";
 import type {SC2DataManager} from "../../../dist-BeforeSC2/SC2DataManager";
 import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
+import type {HtmlTagSrcHookCheckModType} from "../../../dist-BeforeSC2/HtmlTagSrcHook";
 import type {Passage} from "../../../src/BeforeSC2/SugarCube2";
 import {isFunction, isString, reverse} from 'lodash';
 import {CssReplacer} from "./CssReplacer";
@@ -23,6 +24,7 @@ export interface ImgLoaderSideHooker {
         errorCallback: (src: string, layer: any, event: any) => void,
     ) => Promise<boolean>;
     imageGetter: (src: string) => Promise<string | undefined>;
+    checkImageExist?: HtmlTagSrcHookCheckModType;
 }
 
 export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
@@ -55,6 +57,14 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
                 ModLoaderLoadEnd: async () => {
                     await this.onModLoaderLoadEnd();
                 },
+            }
+        );
+        this.gSC2DataManager.getHtmlTagSrcHook().addCheckExistHook('ImgLoaderHooker',
+            (mlSrc: string) => {
+                // console.log('[ImageLoaderHook] getHtmlTagSrcHook addCheckExistHook', [mlSrc]);
+                const r = this.checkImageExist(mlSrc);
+                // console.log('[ImageLoaderHook] getHtmlTagSrcHook addCheckExistHook r', [mlSrc, r]);
+                return r;
             }
         );
         this.gSC2DataManager.getHtmlTagSrcHook().addHook('ImgLoaderHooker',
@@ -356,6 +366,37 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
             }
         }
         return undefined;
+    }
+
+    checkImageExist(src: string) {
+        if (this.imgLookupTable.has(src)) {
+            const n = this.imgLookupTable.get(src);
+            if (n && n.length > 0) {
+                const r = n[0]?.imgData.getter.invalid;
+                if (!r) {
+                    // this is a valid image
+                    return true;
+                }
+            }
+        }
+        let maybeExist = false;
+        for (const hooker of this.sideHooker) {
+            try {
+                if (hooker.checkImageExist) {
+                    const c = hooker.checkImageExist(src);
+                    if (c === true) {
+                        return true;
+                    } else if (c === undefined) {
+                        maybeExist = true;
+                        continue;
+                    }
+                }
+            } catch (e: Error | any) {
+                console.error('[ImageLoaderHook] checkImageExist sideHooker error', [src, hooker, e,]);
+                this.logger.error(`[ImageLoaderHook] checkImageExist sideHooker error: src[${src}] hook[${hooker.hookName}] ${e?.message ? e.message : e}`);
+            }
+        }
+        return maybeExist ? undefined : false;
     }
 
     protected async getImage(src: string) {
