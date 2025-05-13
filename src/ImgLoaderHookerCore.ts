@@ -430,6 +430,7 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
     }
 
     OriginalImageConstructor?: ImageConstructor;
+    OriginalCreateElement?: typeof document['createElement'];
 
 }
 
