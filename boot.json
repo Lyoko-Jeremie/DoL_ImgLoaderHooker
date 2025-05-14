@@ -1,6 +1,6 @@
 {
   "name": "ModLoader DoL ImageLoaderHook",
-  "version": "2.23.0",
+  "version": "2.23.2",
   "alias": [
     "ImageLoaderHook",
     "ImageLoaderHookCore"
