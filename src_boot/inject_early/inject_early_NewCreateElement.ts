@@ -19,7 +19,8 @@
         function createImageElementProxy(imgElement: HTMLImageElement) {
             const r = Object.defineProperty(imgElement, 'src', {
                 get(): any {
-                    return Reflect.get(this, 'src');
+                    return Reflect.apply(Reflect.get(this, 'getAttribute'), this, ['src']);
+                    // return Reflect.get(this, 'src');
                 },
                 set(value: any) {
                     // console.log('[Image] set src', [value]);
