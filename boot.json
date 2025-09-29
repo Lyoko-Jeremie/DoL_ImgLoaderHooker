@@ -1,6 +1,6 @@
 {
   "name": "ModLoader DoL ImageLoaderHook",
-  "version": "2.23.3",
+  "version": "2.26.0",
   "alias": [
     "ImageLoaderHook",
     "ImageLoaderHookCore"
@@ -33,6 +33,10 @@
     {
       "modName": "ModLoader",
       "version": "^2.33.0"
+    },
+    {
+      "modName": "GameVersion",
+      "version": ">=0.5.5.8"
     }
   ]
 }
