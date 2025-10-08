@@ -58,7 +58,7 @@ export class CssReplacer {
                         }
                     }
                 }
-                console.log(`[ImageLoaderHook][CssReplacer] replaceStyleSheets() ok`, [styleSheet.href, styleSheet]);
+                // console.log(`[ImageLoaderHook][CssReplacer] replaceStyleSheets() ok`, [styleSheet.href, styleSheet]);
                 ++countOk;
             } catch (e) {
                 ++countError;
