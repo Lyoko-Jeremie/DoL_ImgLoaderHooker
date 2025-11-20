@@ -7,7 +7,8 @@ export class NodeMutationObserver {
     protected observer: MutationObserver;
     protected originalCreateElement: typeof document.createElement;
 
-    // protected originalImage: typeof window.Image;
+    // 新增：全局处理状态记录，防止竞争条件
+    protected processingElements = new WeakMap<HTMLElement, Set<string>>();
 
     constructor(
         public replaceUrlAsync: (url: string) => Promise<string | undefined>,
@@ -79,72 +80,111 @@ export class NodeMutationObserver {
         await Promise.allSettled(tags.map(attr => this.processNodeTag(node, attr, noLog)));
     }
 
+    /**
+     * 获取元素的处理锁
+     */
+    protected acquireLock(element: HTMLElement, attrName: string): boolean {
+        let attrs = this.processingElements.get(element);
+        if (!attrs) {
+            attrs = new Set();
+            this.processingElements.set(element, attrs);
+        }
+
+        if (attrs.has(attrName)) {
+            // 已经在处理中
+            return false;
+        }
+
+        attrs.add(attrName);
+        return true;
+    }
+
+    /**
+     * 释放元素的处理锁
+     */
+    protected releaseLock(element: HTMLElement, attrName: string): void {
+        const attrs = this.processingElements.get(element);
+        if (attrs) {
+            attrs.delete(attrName);
+            if (attrs.size === 0) {
+                this.processingElements.delete(element);
+            }
+        }
+    }
+
     public async processNodeTag(node: HTMLElement, attrName: string, noLog?: boolean) {
-        // 1. 基础校验：必须是目标标签
-        if (!this.TARGET_TAGS.has(node.tagName?.toLowerCase()) || !node.hasAttribute(attrName)) {
-            // invalid tag or in progress
-            // console.warn('[NodeMutationObserver] processNodeTag attrName not find', [node, node.tagName, attrName]);
+        // 1. 获取锁，防止并发处理
+        if (!this.acquireLock(node, attrName)) {
+            // 正在处理中，跳过
             return;
         }
 
-        const originalUrl = node.getAttribute(attrName)!;
+        try {
+            // 2. 基础校验：必须是目标标签
+            if (!this.TARGET_TAGS.has(node.tagName?.toLowerCase())) {
+                return;
+            }
 
-        // 忽略 data协议、空值 或 锚点
-        if (!originalUrl || originalUrl.toLowerCase() === 'null') {
-            // 不存在 src 或正在处理中
-            console.warn('[NodeMutationObserver] processNodeTag originalUrl empty', [node, attrName, originalUrl]);
-            return;
-        }
-        if (originalUrl.startsWith('data:') || originalUrl.startsWith('#')) {
-            return;
-        }
+            const FLAG_ATTR_NAME = `ml-${attrName}`;
+            const replacedUrlAttr = `ml-replaced-${attrName}`;
 
-        const FLAG_ATTR_NAME = `ml-${attrName}`;
-        const replacedUrlAttr = `ml-replaced-${attrName}`; // 记录我们替换后的 URL
+            // 3. 获取当前值（优先从标记属性获取）
+            let originalUrl = node.getAttribute(FLAG_ATTR_NAME) || node.getAttribute(attrName);
 
-        // 2. 检查是否已处理
-        if (node.hasAttribute(FLAG_ATTR_NAME)) {
+            if (!originalUrl || originalUrl.toLowerCase() === 'null') {
+                return;
+            }
+
+            // 忽略 data协议、空值 或 锚点
+            if (originalUrl.startsWith('data:') || originalUrl.startsWith('#')) {
+                return;
+            }
+
+            // 4. 检查是否已处理过相同的 URL
             const prevOriginal = node.getAttribute(FLAG_ATTR_NAME);
             const prevReplaced = node.getAttribute(replacedUrlAttr);
 
-            // 关键修复：处理动态修改 src 的情况
-            // 如果当前的 url 等于我们之前记录的“原始URL”，说明是重复触发，忽略
-            if (originalUrl === prevOriginal) return;
-            // 如果当前的 url 等于我们“替换后的URL”，说明是我们代码自己设置的，忽略
-            if (originalUrl === prevReplaced) return;
+            if (originalUrl === prevOriginal && node.hasAttribute(replacedUrlAttr)) {
+                // 已经处理过这个 URL
+                return;
+            }
 
-            // 否则，说明网页脚本修改了 src，我们需要重新处理（移除旧标记）
-            // console.log('Detected dynamic src change:', originalUrl);
-        }
+            // 如果当前 src 等于我们之前替换的值，说明是我们自己设置的
+            const currentSrc = node.getAttribute(attrName);
+            if (currentSrc === prevReplaced) {
+                return;
+            }
 
-        // 3. 锁定与阻断请求
-        // 先打上标记，记录原始 URL
-        node.setAttribute(FLAG_ATTR_NAME, originalUrl);
-        // 移除原属性，阻断浏览器请求 (如果是 img src)
-        node.removeAttribute(attrName);
+            // 5. 更新原始 URL 标记
+            node.setAttribute(FLAG_ATTR_NAME, originalUrl);
 
-        try {
-            // 4. 异步计算新 URL
-            const newUrl = await this.replaceUrlAsync(originalUrl);
+            // 6. 移除属性，阻断浏览器请求（只在有实际属性时移除）
+            if (node.hasAttribute(attrName)) {
+                node.removeAttribute(attrName);
+            }
 
-            // 5. 更新 DOM
-            if (newUrl && newUrl !== originalUrl) {
-                console.log(`[NodeMutationObserver] Replaced `, [originalUrl, newUrl, node]);
-                // 记录我们即将设置的值，防止下一次回调误判
-                node.setAttribute(replacedUrlAttr, newUrl);
-                // 恢复属性，触发浏览器加载新资源
-                node.setAttribute(attrName, newUrl);
-            } else {
-                // 如果没有新 URL，恢复原始 URL
+            try {
+                // 7. 异步计算新 URL
+                const newUrl = await this.replaceUrlAsync(originalUrl);
+
+                // 8. 更新 DOM
+                if (newUrl && newUrl !== originalUrl) {
+                    // console.log(`[NodeMutationObserver] Replaced `, [originalUrl, newUrl, node]);
+                    node.setAttribute(replacedUrlAttr, newUrl);
+                    node.setAttribute(attrName, newUrl);
+                } else {
+                    node.removeAttribute(replacedUrlAttr);
+                    node.setAttribute(attrName, originalUrl);
+                }
+            } catch (err) {
+                console.error('[NodeMutationObserver] Replace failed, restoring:', [originalUrl, node, err]);
+                !noLog && this.logger.error(`[NodeMutationObserver] Replace failed, restoring. [${originalUrl}]`);
                 node.removeAttribute(replacedUrlAttr);
                 node.setAttribute(attrName, originalUrl);
             }
-        } catch (err) {
-            console.error('[NodeMutationObserver] Replace failed, restoring:', [originalUrl, node, err]);
-            !noLog && this.logger.error(`[NodeMutationObserver] Replace failed, restoring. [${originalUrl}]`);
-            // 失败回退：移除标记（可选），恢复原始值
-            node.removeAttribute(replacedUrlAttr);
-            node.setAttribute(attrName, originalUrl);
+        } finally {
+            // 9. 释放锁
+            this.releaseLock(node, attrName);
         }
     }
 
@@ -217,9 +257,6 @@ export class NodeMutationObserver {
         const originalGetAttribute = element.getAttribute.bind(element);
         const originalRemoveAttribute = element.removeAttribute.bind(element);
 
-        // 存储当前正在处理的属性，防止递归调用
-        const processingAttrs = new Set<string>();
-
         // --- A. 劫持 setAttribute ---
         element.setAttribute = (name: string, value: string) => {
             const lowerName = name?.toLowerCase();
@@ -229,16 +266,18 @@ export class NodeMutationObserver {
                 return originalSetAttribute(name, value);
             }
 
-            console.log('[NodeMutationObserver] intercept setAttribute', [element, name, value]);
+            // console.log('[NodeMutationObserver] intercept setAttribute', [element, name, value]);
 
-            // 防止递归：如果正在处理该属性，直接透传
-            if (processingAttrs.has(lowerName)) {
+            // 尝试获取锁，如果无法获取说明正在处理中
+            if (!this.acquireLock(element, lowerName)) {
+                // 正在处理中，直接透传（避免干扰）
                 return originalSetAttribute(name, value);
             }
 
             // 过滤无效值
             if (!value || value.toLowerCase() === 'null' ||
                 value.startsWith('data:') || value.startsWith('#')) {
+                this.releaseLock(element, lowerName);
                 return originalSetAttribute(name, value);
             }
 
@@ -250,11 +289,9 @@ export class NodeMutationObserver {
 
             // 如果值等于我们之前记录的原始值或替换值，说明是重复触发或我们自己设置的
             if (value === prevOriginal || value === prevReplaced) {
+                this.releaseLock(element, lowerName);
                 return originalSetAttribute(name, value);
             }
-
-            // 标记正在处理
-            processingAttrs.add(lowerName);
 
             // 记录原始值
             originalSetAttribute(FLAG_ATTR_NAME, value);
@@ -262,25 +299,21 @@ export class NodeMutationObserver {
             // 异步处理 URL 替换
             this.replaceUrlAsync(value).then((newUrl) => {
                 if (newUrl && newUrl !== value) {
-                    console.log(`[NodeMutationObserver] injectInterceptors replaced`, [value, newUrl, element]);
-                    // 记录替换后的 URL
+                    // console.log(`[NodeMutationObserver] injectInterceptors replaced`, [value, newUrl, element]);
                     originalSetAttribute(replacedUrlAttr, newUrl);
-                    // 设置新的 URL
                     originalSetAttribute(name, newUrl);
                 } else {
-                    // 没有替换，设置原始值
                     originalRemoveAttribute(replacedUrlAttr);
                     originalSetAttribute(name, value);
                 }
             }).catch((err) => {
                 console.error('[NodeMutationObserver] injectInterceptors failed:', [value, element, err]);
                 this.logger.error(`[NodeMutationObserver] injectInterceptors failed: [${value}]`);
-                // 失败时恢复原始值
                 originalRemoveAttribute(replacedUrlAttr);
                 originalSetAttribute(name, value);
             }).finally(() => {
-                // 处理完成，移除标记
-                processingAttrs.delete(lowerName);
+                // 处理完成，释放锁
+                this.releaseLock(element, lowerName);
             });
 
             // 立即返回，阻止浏览器立即加载
