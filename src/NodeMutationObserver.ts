@@ -38,7 +38,8 @@ export class NodeMutationObserver {
      * 必须调用此方法代码才会生效
      */
     public start() {
-        this.logger.log('[NodeMutationObserver] Started observing DOM changes.');
+        console.log('[NodeMutationObserver] Starting......');
+        this.logger.log('[NodeMutationObserver] Starting......');
 
         // 1. 启动 DOM 监听
         this.observer.observe(document.documentElement, {
@@ -55,6 +56,9 @@ export class NodeMutationObserver {
 
         // 3. 启动时先全量扫描一次
         this.replaceAllOnce();
+
+        console.log('[NodeMutationObserver] Started ok.');
+        this.logger.log('[NodeMutationObserver] Started ok.');
     }
 
     public stop() {
