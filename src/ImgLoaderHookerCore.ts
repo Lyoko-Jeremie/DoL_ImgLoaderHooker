@@ -9,6 +9,7 @@ import type {Passage} from "../../../src/BeforeSC2/SugarCube2";
 import {isFunction, isString, reverse} from 'lodash';
 import {CssReplacer} from "./CssReplacer";
 import {sleep} from "./utils";
+import {NodeMutationObserver} from "./NodeMutationObserver";
 
 /**
  * @return Promise<boolean>      Promise<true> if handle by this hooker, otherwise Promise<false>.
@@ -29,6 +30,8 @@ export interface ImgLoaderSideHooker {
 
 export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
     protected logger: LogWrapper;
+
+    protected nodeMutationObserver: NodeMutationObserver;
 
     constructor(
         public thisWindow: Window,
@@ -91,6 +94,11 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
             },
         );
         this.cssReplacer = new CssReplacer(thisWindow, gSC2DataManager, gModUtils);
+
+        this.nodeMutationObserver = new NodeMutationObserver(
+            this.getImage,
+            this.gModUtils,
+        );
 
         const theName = this.gModUtils.getNowRunningModName();
         if (!theName) {
@@ -170,7 +178,10 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
                     !(
                         img.hasAttribute('ml-src') ||
                         img.hasAttribute('ML-src') ||
-                        img.src.startsWith('data:')
+                        img.src.startsWith('data:') ||
+                        img.hasAttribute('ml-href') ||
+                        img.hasAttribute('ML-href') ||
+                        img.getAttribute('href')?.startsWith('data:')
                     )
                 );
                 if (imgNotHookedList.length !== 0) {
@@ -197,33 +208,34 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
     }
 
     protected async replaceImageInImgTags(img: HTMLImageElement, noLog?: boolean) {
-        if (img.hasAttribute('ml-src') || img.hasAttribute('ML-src')) {
-            // this is processed or processing
-            return;
-        }
-        const src = img.getAttribute('src');
-        if (src?.startsWith('data:')) {
-            // ignore it
-            return;
-        }
-        if (!src) {
-            // seems like it state wrong ?
-            console.warn('[ImageLoaderHook] replaceImageInImgTags() img.src is empty', [img]);
-            return;
-        }
-        // ===============
-        img.setAttribute('ml-src', src);
-        img.removeAttribute('src');
-        // console.log(this);
-        const m = await this.getImage(src);
-        // console.log('[ImageLoaderHook] replaceImageInImgTags() get img', [src, m]);
-        if (m) {
-            img.setAttribute('src', m);
-        } else {
-            img.setAttribute('src', src);
-            console.warn('[ImageLoaderHook] replaceImageInImgTags() cannot find img', [img, src]);
-            !noLog && this.logger.warn(`[ImageLoaderHook] replaceImageInImgTags() cannot find img. [${src}]`);
-        }
+        return this.nodeMutationObserver.processNodeTag(img, 'src');
+        // if (img.hasAttribute('ml-src') || img.hasAttribute('ML-src')) {
+        //     // this is processed or processing
+        //     return;
+        // }
+        // const src = img.getAttribute('src');
+        // if (src?.startsWith('data:')) {
+        //     // ignore it
+        //     return;
+        // }
+        // if (!src) {
+        //     // seems like it state wrong ?
+        //     console.warn('[ImageLoaderHook] replaceImageInImgTags() img.src is empty', [img]);
+        //     return;
+        // }
+        // // ===============
+        // img.setAttribute('ml-src', src);
+        // img.removeAttribute('src');
+        // // console.log(this);
+        // const m = await this.getImage(src);
+        // // console.log('[ImageLoaderHook] replaceImageInImgTags() get img', [src, m]);
+        // if (m) {
+        //     img.setAttribute('src', m);
+        // } else {
+        //     img.setAttribute('src', src);
+        //     console.warn('[ImageLoaderHook] replaceImageInImgTags() cannot find img', [img, src]);
+        //     !noLog && this.logger.warn(`[ImageLoaderHook] replaceImageInImgTags() cannot find img. [${src}]`);
+        // }
     }
 
     async registerMod(addonName: string, mod: ModInfo, modZip: ModZipReader) {
