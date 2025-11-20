@@ -82,14 +82,16 @@ export class NodeMutationObserver {
     public async processNodeTag(node: HTMLElement, attrName: string, noLog?: boolean) {
         // 1. 基础校验：必须是目标标签
         if (!this.TARGET_TAGS.has(node.tagName?.toLowerCase()) || !node.hasAttribute(attrName)) {
+            console.warn('[NodeMutationObserver] processNodeTag attrName not find', [node, node.tagName, attrName]);
             return;
         }
 
         const originalUrl = node.getAttribute(attrName)!;
 
         // 忽略 data协议、空值 或 锚点
-        if (!originalUrl) {
+        if (!originalUrl || originalUrl.toLowerCase() === 'null') {
             // 不存在 src 或正在处理中
+            console.warn('[NodeMutationObserver] processNodeTag originalUrl empty', [node, attrName, originalUrl]);
             return;
         }
         if (originalUrl.startsWith('data:') || originalUrl.startsWith('#')) {
