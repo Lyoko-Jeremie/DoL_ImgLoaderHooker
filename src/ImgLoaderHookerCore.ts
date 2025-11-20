@@ -413,6 +413,7 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
     }
 
     protected async getImage(src: string) {
+        src = this.normalizePath(src);
         if (this.imgLookupTable.has(src)) {
             const n = this.imgLookupTable.get(src);
             if (n && n.length > 0) {
@@ -444,6 +445,34 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
 
     OriginalImageConstructor?: ImageConstructor;
     OriginalCreateElement?: typeof document['createElement'];
+
+    /**
+     * 归一化路径为相对路径格式
+     * @param path 待归一化的路径
+     * @returns 归一化后的相对路径（去除前导 / 和 ./）
+     */
+    normalizePath(path: string): string {
+        if (!path) return path;
+
+        // 分割路径并过滤空段和单点
+        const segments = path.split('/').filter(segment => segment && segment !== '.');
+
+        // 处理 .. 符号
+        const normalized: string[] = [];
+        for (const segment of segments) {
+            if (segment === '..') {
+                // 回退一级（如果可能）
+                if (normalized.length > 0) {
+                    normalized.pop();
+                }
+            } else {
+                normalized.push(segment);
+            }
+        }
+
+        // 返回相对路径（不带前导斜杠）
+        return normalized.join('/');
+    }
 
 }
 
