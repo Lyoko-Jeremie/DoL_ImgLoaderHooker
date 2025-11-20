@@ -82,7 +82,8 @@ export class NodeMutationObserver {
     public async processNodeTag(node: HTMLElement, attrName: string, noLog?: boolean) {
         // 1. 基础校验：必须是目标标签
         if (!this.TARGET_TAGS.has(node.tagName?.toLowerCase()) || !node.hasAttribute(attrName)) {
-            console.warn('[NodeMutationObserver] processNodeTag attrName not find', [node, node.tagName, attrName]);
+            // invalid tag or in progress
+            // console.warn('[NodeMutationObserver] processNodeTag attrName not find', [node, node.tagName, attrName]);
             return;
         }
 
@@ -206,46 +207,132 @@ export class NodeMutationObserver {
 
         const targetAttrs = this.TARGET_TAGS.get(lowerTagName)!;
 
-        // 备份该实例原本的 setAttribute
+        // 标记：防止重复注入
+        const INJECTED_FLAG = '_ml_interceptors_injected';
+        if ((element as any)[INJECTED_FLAG]) return;
+        (element as any)[INJECTED_FLAG] = true;
+
+        // 备份原始方法
         const originalSetAttribute = element.setAttribute.bind(element);
+        const originalGetAttribute = element.getAttribute.bind(element);
+        const originalRemoveAttribute = element.removeAttribute.bind(element);
+
+        // 存储当前正在处理的属性，防止递归调用
+        const processingAttrs = new Set<string>();
 
         // --- A. 劫持 setAttribute ---
         element.setAttribute = (name: string, value: string) => {
             const lowerName = name?.toLowerCase();
-            if (targetAttrs.includes(lowerName)) {
-                // 命中目标属性！阻断同步设置，转为异步处理
-                this.replaceUrlAsync(value).then((newUrl) => {
-                    if (newUrl && newUrl !== value) {
-                        originalSetAttribute(`ml-replaced-${lowerName}`, newUrl);
-                        originalSetAttribute(`ml-${lowerName}`, value);
-                        originalSetAttribute(name, newUrl);
-                    } else {
-                        originalSetAttribute(name, value);
-                    }
-                }).catch((err) => {
-                    console.error('[NodeMutationObserver] intercept failed', err);
-                    originalSetAttribute(name, value);
-                });
 
-                // 阻止立即加载
-                return;
+            // 如果不是目标属性，或者是我们的标记属性，直接透传
+            if (!targetAttrs.includes(lowerName) || lowerName.startsWith('ml-')) {
+                return originalSetAttribute(name, value);
             }
-            return originalSetAttribute(name, value);
+
+            console.log('[NodeMutationObserver] intercept setAttribute', [element, name, value]);
+
+            // 防止递归：如果正在处理该属性，直接透传
+            if (processingAttrs.has(lowerName)) {
+                return originalSetAttribute(name, value);
+            }
+
+            // 过滤无效值
+            if (!value || value.toLowerCase() === 'null' ||
+                value.startsWith('data:') || value.startsWith('#')) {
+                return originalSetAttribute(name, value);
+            }
+
+            // 检查是否已经处理过（避免重复处理）
+            const FLAG_ATTR_NAME = `ml-${lowerName}`;
+            const replacedUrlAttr = `ml-replaced-${lowerName}`;
+            const prevOriginal = originalGetAttribute(FLAG_ATTR_NAME);
+            const prevReplaced = originalGetAttribute(replacedUrlAttr);
+
+            // 如果值等于我们之前记录的原始值或替换值，说明是重复触发或我们自己设置的
+            if (value === prevOriginal || value === prevReplaced) {
+                return originalSetAttribute(name, value);
+            }
+
+            // 标记正在处理
+            processingAttrs.add(lowerName);
+
+            // 记录原始值
+            originalSetAttribute(FLAG_ATTR_NAME, value);
+
+            // 异步处理 URL 替换
+            this.replaceUrlAsync(value).then((newUrl) => {
+                if (newUrl && newUrl !== value) {
+                    console.log(`[NodeMutationObserver] injectInterceptors replaced`, [value, newUrl, element]);
+                    // 记录替换后的 URL
+                    originalSetAttribute(replacedUrlAttr, newUrl);
+                    // 设置新的 URL
+                    originalSetAttribute(name, newUrl);
+                } else {
+                    // 没有替换，设置原始值
+                    originalRemoveAttribute(replacedUrlAttr);
+                    originalSetAttribute(name, value);
+                }
+            }).catch((err) => {
+                console.error('[NodeMutationObserver] injectInterceptors failed:', [value, element, err]);
+                this.logger.error(`[NodeMutationObserver] injectInterceptors failed: [${value}]`);
+                // 失败时恢复原始值
+                originalRemoveAttribute(replacedUrlAttr);
+                originalSetAttribute(name, value);
+            }).finally(() => {
+                // 处理完成，移除标记
+                processingAttrs.delete(lowerName);
+            });
+
+            // 立即返回，阻止浏览器立即加载
+            return;
         };
 
         // --- B. 劫持属性 Setter (如 img.src = '...') ---
         targetAttrs.forEach(attr => {
-            if (attr in element) {
-                Object.defineProperty(element, attr, {
-                    configurable: true,
-                    enumerable: true,
-                    // 注意：原生 img.src 返回绝对路径，这里简单处理返回 getAttribute
-                    get: () => element.getAttribute(attr) || '',
-                    set: (v: string) => {
-                        element.setAttribute(attr, v);
-                    }
-                });
+            // 跳过 ml- 前缀的属性
+            if (attr.startsWith('ml-')) return;
+
+            // 获取原始属性描述符
+            let descriptor = Object.getOwnPropertyDescriptor(element, attr);
+            if (!descriptor) {
+                // 尝试从原型链获取
+                let proto = Object.getPrototypeOf(element);
+                while (proto && !descriptor) {
+                    descriptor = Object.getOwnPropertyDescriptor(proto, attr);
+                    proto = Object.getPrototypeOf(proto);
+                }
             }
+
+            // 如果找不到描述符或不可配置，跳过
+            if (!descriptor || descriptor.configurable === false) {
+                return;
+            }
+
+            // 保存原始的 getter（如果存在）
+            const originalGetter = descriptor.get;
+            const originalSetter = descriptor.set;
+
+            // 定义新的属性拦截器
+            Object.defineProperty(element, attr, {
+                configurable: true,
+                enumerable: descriptor.enumerable !== undefined ? descriptor.enumerable : true,
+                get: function(this: HTMLElement) {
+                    // 优先返回实际的属性值（通过 getAttribute）
+                    const attrValue = originalGetAttribute(attr);
+                    if (attrValue !== null) {
+                        return attrValue;
+                    }
+                    // 如果没有属性值，使用原始 getter（如果存在）
+                    if (originalGetter) {
+                        return originalGetter.call(this);
+                    }
+                    return '';
+                },
+                set: function(this: HTMLElement, value: string) {
+                    // 通过劫持后的 setAttribute 设置，触发拦截逻辑
+                    this.setAttribute(attr, value);
+                }
+            });
         });
     }
 
