@@ -4,6 +4,10 @@ import type {ModUtils} from "../../../dist-BeforeSC2/Utils";
 // code from: gemini 3
 export class NodeMutationObserver {
     protected logger: LogWrapper;
+    protected observer: MutationObserver;
+    protected originalCreateElement: typeof document.createElement;
+
+    // protected originalImage: typeof window.Image;
 
     constructor(
         public replaceUrlAsync: (url: string) => Promise<string | undefined>,
@@ -11,9 +15,10 @@ export class NodeMutationObserver {
     ) {
         this.logger = this.gModUtils.getLogger();
         this.observer = new MutationObserver(this.observerCallback);
+        // 绑定原始方法，防止丢失
+        this.originalCreateElement = document.createElement.bind(document);
+        // this.originalImage = window.Image;
     }
-
-    protected observer: MutationObserver;
 
     protected TARGET_TAGS = new Map<string, string[]>([
         ['img', ['src', /*'srcset'*/]],
@@ -32,6 +37,8 @@ export class NodeMutationObserver {
      */
     public start() {
         this.logger.log('[NodeMutationObserver] Started observing DOM changes.');
+
+        // 1. 启动 DOM 监听
         this.observer.observe(document.documentElement, {
             childList: true,
             subtree: true,
@@ -39,12 +46,20 @@ export class NodeMutationObserver {
             // 仅监听目标属性，提升性能
             attributeFilter: this.AttributeFilter,
         });
-        // 启动时先全量扫描一次
+
+        // 2. 启动 API 劫持 (针对 createElement 创建的游离节点)
+        this.hookCreateElement();
+        // this.hookImageConstructor(); // 劫持 new Image()
+
+        // 3. 启动时先全量扫描一次
         this.replaceAllOnce();
     }
 
     public stop() {
         this.observer.disconnect();
+        // 还原原生 API
+        document.createElement = this.originalCreateElement;
+        // window.Image = this.originalImage;
     }
 
     /**
@@ -66,7 +81,7 @@ export class NodeMutationObserver {
 
     public async processNodeTag(node: HTMLElement, attrName: string, noLog?: boolean) {
         // 1. 基础校验：必须是目标标签
-        if (!this.TARGET_TAGS.has(node.tagName.toLowerCase()) || !node.hasAttribute(attrName)) {
+        if (!this.TARGET_TAGS.has(node.tagName?.toLowerCase()) || !node.hasAttribute(attrName)) {
             return;
         }
 
@@ -111,6 +126,7 @@ export class NodeMutationObserver {
 
             // 5. 更新 DOM
             if (newUrl && newUrl !== originalUrl) {
+                console.log(`[NodeMutationObserver] Replaced `, [originalUrl, newUrl, node]);
                 // 记录我们即将设置的值，防止下一次回调误判
                 node.setAttribute(replacedUrlAttr, newUrl);
                 // 恢复属性，触发浏览器加载新资源
@@ -177,5 +193,88 @@ export class NodeMutationObserver {
         // 转换为数组使用 for 循环或 forEach
         nodes.forEach(T => this.processNode(T as HTMLElement));
     }
+
+    /**
+     * 核心拦截逻辑：为元素注入属性拦截器
+     * 提取为公共方法，供 createElement 和 Image 构造函数共用
+     */
+    protected injectInterceptors(element: HTMLElement, tagName: string) {
+        const lowerTagName = tagName?.toLowerCase();
+        if (!this.TARGET_TAGS.has(lowerTagName)) return;
+
+        const targetAttrs = this.TARGET_TAGS.get(lowerTagName)!;
+
+        // 备份该实例原本的 setAttribute
+        const originalSetAttribute = element.setAttribute.bind(element);
+
+        // --- A. 劫持 setAttribute ---
+        element.setAttribute = (name: string, value: string) => {
+            const lowerName = name?.toLowerCase();
+            if (targetAttrs.includes(lowerName)) {
+                // 命中目标属性！阻断同步设置，转为异步处理
+                this.replaceUrlAsync(value).then((newUrl) => {
+                    if (newUrl && newUrl !== value) {
+                        originalSetAttribute(`ml-replaced-${lowerName}`, newUrl);
+                        originalSetAttribute(`ml-${lowerName}`, value);
+                        originalSetAttribute(name, newUrl);
+                    } else {
+                        originalSetAttribute(name, value);
+                    }
+                }).catch((err) => {
+                    console.error('[NodeMutationObserver] intercept failed', err);
+                    originalSetAttribute(name, value);
+                });
+
+                // 阻止立即加载
+                return;
+            }
+            return originalSetAttribute(name, value);
+        };
+
+        // --- B. 劫持属性 Setter (如 img.src = '...') ---
+        targetAttrs.forEach(attr => {
+            if (attr in element) {
+                Object.defineProperty(element, attr, {
+                    configurable: true,
+                    enumerable: true,
+                    // 注意：原生 img.src 返回绝对路径，这里简单处理返回 getAttribute
+                    get: () => element.getAttribute(attr) || '',
+                    set: (v: string) => {
+                        element.setAttribute(attr, v);
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 劫持 document.createElement
+     */
+    protected hookCreateElement() {
+        document.createElement = <K extends keyof HTMLElementTagNameMap>(tagName: K, options?: ElementCreationOptions) => {
+            const element = this.originalCreateElement(tagName, options);
+            this.injectInterceptors(element, tagName);
+            return element;
+        };
+    }
+
+    // /**
+    //  * 新增：劫持 new Image()
+    //  */
+    // protected hookImageConstructor() {
+    //     // // 必须使用 class extends 保持原型链一致，否则某些库检查 instanceOf Image 会失败
+    //     // // 这里利用闭包捕获 this
+    //     // const thisPtr = this;
+    //     // window.Image = class extends thisPtr.originalImage {
+    //     //     constructor(width?: number, height?: number) {
+    //     //         super(width, height);
+    //     //         // 在实例创建后立即注入拦截逻辑
+    //     //         // new Image() 生成的必然是 img 标签
+    //     //         thisPtr.injectInterceptors(this, 'img');
+    //     //         return this;
+    //     //     }
+    //     // };
+    // }
+
 
 }
