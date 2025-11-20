@@ -58,6 +58,7 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
             'ImageLoaderHook',
             {
                 ModLoaderLoadEnd: async () => {
+                    this.nodeMutationObserver.start();
                     await this.onModLoaderLoadEnd();
                 },
             }
@@ -96,7 +97,7 @@ export class ImgLoaderHookerCore implements AddonPluginHookPointEx {
         this.cssReplacer = new CssReplacer(thisWindow, gSC2DataManager, gModUtils);
 
         this.nodeMutationObserver = new NodeMutationObserver(
-            this.getImage,
+            this.getImage.bind(this),
             this.gModUtils,
         );
 

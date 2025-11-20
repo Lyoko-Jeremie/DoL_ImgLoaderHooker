@@ -11,8 +11,7 @@
   ],
   "scriptFileList_inject_early": [
     "dist/ImageLoaderHook.mod.js",
-    "dist/inject_early/inject_early_NewImage.js",
-    "dist/inject_early/inject_early_NewCreateElement.js"
+    "dist/inject_early/inject_early_NewImage.js"
   ],
   "scriptFileList_preload": [
     "dist/preload/preload.js"
