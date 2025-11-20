@@ -6,6 +6,7 @@ export class NodeMutationObserver {
     protected logger: LogWrapper;
     protected observer: MutationObserver;
     protected originalCreateElement: typeof document.createElement;
+    protected originalImage: typeof Image;
 
     // 新增：全局处理状态记录，防止竞争条件
     protected processingElements = new WeakMap<HTMLElement, Set<string>>();
@@ -18,7 +19,7 @@ export class NodeMutationObserver {
         this.observer = new MutationObserver(this.observerCallback);
         // 绑定原始方法，防止丢失
         this.originalCreateElement = document.createElement.bind(document);
-        // this.originalImage = window.Image;
+        this.originalImage = window.Image;
     }
 
     protected TARGET_TAGS = new Map<string, string[]>([
@@ -50,7 +51,7 @@ export class NodeMutationObserver {
 
         // 2. 启动 API 劫持 (针对 createElement 创建的游离节点)
         this.hookCreateElement();
-        // this.hookImageConstructor(); // 劫持 new Image()
+        this.hookImageConstructor(); // 劫持 new Image()
 
         // 3. 启动时先全量扫描一次
         this.replaceAllOnce();
@@ -60,7 +61,7 @@ export class NodeMutationObserver {
         this.observer.disconnect();
         // 还原原生 API
         document.createElement = this.originalCreateElement;
-        // window.Image = this.originalImage;
+        window.Image = this.originalImage;
     }
 
     /**
@@ -380,23 +381,24 @@ export class NodeMutationObserver {
         };
     }
 
-    // /**
-    //  * 新增：劫持 new Image()
-    //  */
-    // protected hookImageConstructor() {
-    //     // // 必须使用 class extends 保持原型链一致，否则某些库检查 instanceOf Image 会失败
-    //     // // 这里利用闭包捕获 this
-    //     // const thisPtr = this;
-    //     // window.Image = class extends thisPtr.originalImage {
-    //     //     constructor(width?: number, height?: number) {
-    //     //         super(width, height);
-    //     //         // 在实例创建后立即注入拦截逻辑
-    //     //         // new Image() 生成的必然是 img 标签
-    //     //         thisPtr.injectInterceptors(this, 'img');
-    //     //         return this;
-    //     //     }
-    //     // };
-    // }
+    /**
+     * 新增：劫持 new Image()
+     */
+    protected hookImageConstructor() {
+        // 必须使用 class extends 保持原型链一致，否则某些库检查 instanceOf Image 会失败
+        // 这里利用闭包捕获 this 和 originalImage
+        const thisPtr = this;
+        const OriginalImage = this.originalImage;
+
+        window.Image = class extends OriginalImage {
+            constructor(width?: number, height?: number) {
+                super(width, height);
+                // 在实例创建后立即注入拦截逻辑
+                // new Image() 生成的必然是 img 标签
+                thisPtr.injectInterceptors(this as any as HTMLElement, 'img');
+            }
+        } as any;
+    }
 
 
 }
