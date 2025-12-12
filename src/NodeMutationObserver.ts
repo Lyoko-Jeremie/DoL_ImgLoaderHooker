@@ -11,6 +11,9 @@ export class NodeMutationObserver {
     // 新增：全局处理状态记录，防止竞争条件
     protected processingElements = new WeakMap<HTMLElement, Set<string>>();
 
+    // 新增：记录每个属性正在处理的原始 URL，用于检测过期的异步结果
+    protected processingUrls = new WeakMap<HTMLElement, Map<string, string>>();
+
     constructor(
         public replaceUrlAsync: (url: string) => Promise<string | undefined>,
         public gModUtils: ModUtils,
@@ -133,62 +136,62 @@ export class NodeMutationObserver {
             const FLAG_ATTR_NAME = `ml-${attrName}`;
             const replacedUrlAttr = `ml-replaced-${attrName}`;
 
-            // 3. 获取当前值（优先从标记属性获取）
-            let originalUrl = node.getAttribute(FLAG_ATTR_NAME) || node.getAttribute(attrName);
+            // 3. 获取当前属性值
+            const currentSrc = node.getAttribute(attrName);
 
-            if (!originalUrl || originalUrl.toLowerCase() === 'null') {
+            if (!currentSrc || currentSrc.toLowerCase() === 'null') {
                 return;
             }
 
             // 忽略 data协议、空值 或 锚点
-            if (originalUrl.startsWith('data:') || originalUrl.startsWith('#')) {
+            if (currentSrc.startsWith('data:') || currentSrc.startsWith('#')) {
                 return;
             }
 
-            // 4. 检查是否已处理过相同的 URL
+            // 4. 获取之前的处理记录
             const prevOriginal = node.getAttribute(FLAG_ATTR_NAME);
             const prevReplaced = node.getAttribute(replacedUrlAttr);
 
-            if (originalUrl === prevOriginal && node.hasAttribute(replacedUrlAttr)) {
-                // 已经处理过这个 URL
+            // 5. 检查是否需要处理：如果当前值等于之前的原始值或替换值，说明无需重复处理
+            // 这是防止无限循环的关键：无论有无替换，只要 currentSrc 匹配任一记录值就跳过
+            if (currentSrc === prevOriginal || currentSrc === prevReplaced) {
                 return;
             }
 
-            // 如果当前 src 等于我们之前替换的值，说明是我们自己设置的
-            const currentSrc = node.getAttribute(attrName);
-            if (currentSrc === prevReplaced) {
-                return;
-            }
+            // 6. currentSrc 是新的原始 URL，需要处理
+            const originalUrl = currentSrc;
 
-            // 5. 更新原始 URL 标记
+            // 7. 更新原始 URL 标记
             node.setAttribute(FLAG_ATTR_NAME, originalUrl);
 
-            // 6. 移除属性，阻断浏览器请求（只在有实际属性时移除）
+            // 8. 移除属性，阻断浏览器请求（只在有实际属性时移除）
             if (node.hasAttribute(attrName)) {
                 node.removeAttribute(attrName);
             }
 
             try {
-                // 7. 异步计算新 URL
+                // 9. 异步计算新 URL
                 const newUrl = await this.replaceUrlAsync(originalUrl);
 
-                // 8. 更新 DOM
+                // 10. 更新 DOM - 关键修复：无论有无替换，都设置 replacedUrlAttr 防止重复触发
                 if (newUrl && newUrl !== originalUrl) {
                     // console.log(`[NodeMutationObserver] Replaced `, [originalUrl, newUrl, node]);
                     node.setAttribute(replacedUrlAttr, newUrl);
                     node.setAttribute(attrName, newUrl);
                 } else {
-                    node.removeAttribute(replacedUrlAttr);
+                    // 无替换时，将 replacedUrlAttr 设为原始值，标记已处理
+                    node.setAttribute(replacedUrlAttr, originalUrl);
                     node.setAttribute(attrName, originalUrl);
                 }
             } catch (err) {
                 console.error('[NodeMutationObserver] Replace failed, restoring:', [originalUrl, node, err]);
                 !noLog && this.logger.error(`[NodeMutationObserver] Replace failed, restoring. [${originalUrl}]`);
-                node.removeAttribute(replacedUrlAttr);
+                // 错误时也要设置标记，防止无限重试
+                node.setAttribute(replacedUrlAttr, originalUrl);
                 node.setAttribute(attrName, originalUrl);
             }
         } finally {
-            // 9. 释放锁
+            // 11. 释放锁
             this.releaseLock(node, attrName);
         }
     }
@@ -273,52 +276,91 @@ export class NodeMutationObserver {
 
             // console.log('[NodeMutationObserver] intercept setAttribute', [element, name, value]);
 
-            // 尝试获取锁，如果无法获取说明正在处理中
-            if (!this.acquireLock(element, lowerName)) {
-                // 正在处理中，直接透传（避免干扰）
-                return originalSetAttribute(name, value);
-            }
+            const FLAG_ATTR_NAME = `ml-${lowerName}`;
+            const replacedUrlAttr = `ml-replaced-${lowerName}`;
 
             // 过滤无效值
             if (!value || value.toLowerCase() === 'null' ||
                 value.startsWith('data:') || value.startsWith('#')) {
-                this.releaseLock(element, lowerName);
                 return originalSetAttribute(name, value);
             }
 
             // 检查是否已经处理过（避免重复处理）
-            const FLAG_ATTR_NAME = `ml-${lowerName}`;
-            const replacedUrlAttr = `ml-replaced-${lowerName}`;
             const prevOriginal = originalGetAttribute(FLAG_ATTR_NAME);
             const prevReplaced = originalGetAttribute(replacedUrlAttr);
 
             // 如果值等于我们之前记录的原始值或替换值，说明是重复触发或我们自己设置的
             if (value === prevOriginal || value === prevReplaced) {
-                this.releaseLock(element, lowerName);
                 return originalSetAttribute(name, value);
             }
 
-            // 记录原始值
+            // 记录原始值（即使锁被占用也要更新，这样异步完成时可以检测到过期）
             originalSetAttribute(FLAG_ATTR_NAME, value);
+
+            // 更新正在处理的 URL 记录
+            let urlMap = this.processingUrls.get(element);
+            if (!urlMap) {
+                urlMap = new Map();
+                this.processingUrls.set(element, urlMap);
+            }
+            urlMap.set(lowerName, value);
+
+            // 尝试获取锁，如果无法获取说明正在处理中
+            if (!this.acquireLock(element, lowerName)) {
+                // 正在处理中，已更新 FLAG_ATTR_NAME 和 processingUrls
+                // 当前异步完成时会检测到 URL 已变化并放弃过期结果
+                // 这里不设置 src，避免触发不必要的加载
+                return;
+            }
+
+            // 捕获当前要处理的 URL（用于后续比较）
+            const urlToProcess = value;
 
             // 异步处理 URL 替换
             this.replaceUrlAsync(value).then((newUrl) => {
+                // 关键：检查当前待处理的 URL 是否仍然是我们开始处理的那个
+                const currentPendingUrl = this.processingUrls.get(element)?.get(lowerName);
+                if (currentPendingUrl !== urlToProcess) {
+                    // URL 已变化，放弃这个过期的结果，让新的处理来设置
+                    // console.log('[NodeMutationObserver] Discarding stale result', [urlToProcess, currentPendingUrl]);
+                    return;
+                }
+
                 if (newUrl && newUrl !== value) {
                     // console.log(`[NodeMutationObserver] injectInterceptors replaced`, [value, newUrl, element]);
                     originalSetAttribute(replacedUrlAttr, newUrl);
                     originalSetAttribute(name, newUrl);
                 } else {
-                    originalRemoveAttribute(replacedUrlAttr);
+                    // 关键修复：无替换时也设置 replacedUrlAttr，防止 MutationObserver 再次处理导致无限循环
+                    originalSetAttribute(replacedUrlAttr, value);
                     originalSetAttribute(name, value);
                 }
             }).catch((err) => {
                 console.error('[NodeMutationObserver] injectInterceptors failed:', [value, element, err]);
                 this.logger.error(`[NodeMutationObserver] injectInterceptors failed: [${value}]`);
-                originalRemoveAttribute(replacedUrlAttr);
+
+                // 检查是否过期
+                const currentPendingUrl = this.processingUrls.get(element)?.get(lowerName);
+                if (currentPendingUrl !== urlToProcess) {
+                    return;
+                }
+
+                // 错误时也要设置标记，防止无限重试
+                originalSetAttribute(replacedUrlAttr, value);
                 originalSetAttribute(name, value);
             }).finally(() => {
                 // 处理完成，释放锁
                 this.releaseLock(element, lowerName);
+
+                // 检查是否有新的 URL 需要处理（在锁被占用期间设置的）
+                const currentPendingUrl = this.processingUrls.get(element)?.get(lowerName);
+                if (currentPendingUrl && currentPendingUrl !== urlToProcess) {
+                    // 有新的 URL 需要处理，重新触发 setAttribute
+                    // 使用 setTimeout 避免同步递归
+                    setTimeout(() => {
+                        element.setAttribute(name, currentPendingUrl);
+                    }, 0);
+                }
             });
 
             // 立即返回，阻止浏览器立即加载
